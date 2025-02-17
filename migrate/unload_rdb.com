@@ -12,21 +12,20 @@ $   WRITE SYS$OUTPUT "This will be used as schema in Mimer SQL"
 $   EXIT 4
 $ ENDIF
 $ WRITE SYS$OUTPUT "Checking directory and files"
+$ TABLE_DEFS = "[.unload_data]''DBNAME'-TABLES-RDB.TXT"
 $ IF F$PARSE("[.unload_data]","","DIRECTORY") .EQS. ""
 $ THEN
 $   WRITE SYS$OUTPUT "Creating [.unload_data] directory"
 $   CRE/DIR [.unload_data]
 $ ELSE
-$   TMP = F$SEARCH("[.unload_data]''DBNAME'-TABLES.TXT")
+$   TMP = F$SEARCH("''TABLE_DEFS'")
 $   IF TMP .NES. ""
 $   THEN
-$       WRITE SYS$OUTPUT "Deleting [.unload_data]''DBNAME'-TABLES.TXT"
-$       DELETE [.unload_data]'DBNAME'-TABLES.TXT;*
+$       DELETE 'TABLE_DEFS';*
 $   ENDIF
 $ ENDIF
 $ WRITE SYS$OUTPUT "Check done"
 $ DEFINE/NOLOG EXPORT_DB 'DB'
-$ TABLE_DEFS = "[.unload_data]''DBNAME'-TABLES.TXT"
 $ 
 $ WRITE SYS$OUTPUT "Extracting database schema"
 $ RMU/EXTRACT/Output=[.unload_data]'DBNAME'-SCHEMA-RDB.SQL 'DB'

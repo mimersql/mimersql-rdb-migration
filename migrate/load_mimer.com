@@ -25,6 +25,7 @@ $ IF  P3 .nes. ""
 $   THEN MIMER_USER="''P3'" 
 $ ENDIF
 $! Check export directory
+$ TABLE_DEFS = "[.unload_data]''SCHEMA'-TABLES-MIMER.TXT"
 $ WRITE SYS$OUTPUT "Checking directory and files"
 $ IF F$PARSE("[.unload_data]","","DIRECTORY") .EQS. ""
 $ THEN
@@ -34,11 +35,10 @@ $   WRITE SYS$OUTPUT "If different machines are being used, transer the [.unload
 $   WRITE SYS$OUTPUT "directory to the machine running Mimer SQL."
 $   EXIT 4
 $ ELSE
-$   TMP = F$SEARCH("[.unload_data]''SCHEMA'-TABLES.TXT")
-$   IF TMP .EQS. ""
+$   TMP = F$SEARCH("''TABLE_DEFS'")
+$   IF TMP .NES. ""
 $   THEN
-$       WRITE SYS$OUTPUT "[.unload_data]''SCHEMA'-TABLES.TXT not found"
-$       EXIT 4
+$       DELETE 'TABLE_DEFS';*
 $   ENDIF
 $   TMP = F$SEARCH("[.unload_data]''SCHEMA'-SCHEMA-RDB.SQL")
 $   IF TMP .EQS. ""
@@ -48,7 +48,6 @@ $       EXIT 4
 $   ENDIF
 $ ENDIF
 $ WRITE SYS$OUTPUT "Check done"
-$ TABLE_DEFS = "[.unload_data]''SCHEMA'-TABLES.TXT"
 $
 $! Create directory for log files or clear it if it exists
 $ IF F$PARSE("[.log]","","DIRECTORY") .EQS. ""
@@ -124,7 +123,7 @@ $ WRITE SYS$OUTPUT "Loading exported data into Mimer SQL"
 $! Load tables in correct order so we don't violate foreign key constraints
 $ OPEN/WRITE OUTFILE [.gen_sql]get_tables_'SCHEMA'.sql
 $ WRITE SYS$OUTPUT "Log files for the load operations can be found in [.log]"
-$ WRITE OUTFILE "log output on '[.unload_data]get_tables_''SCHEMA'.txt';"
+$ WRITE OUTFILE "log output on '" + "''TABLE_DEFS'" + "';"
 $ WRITE OUTFILE "set silence on;"
 $ WRITE OUTFILE "select object_name from system.objects where object_type = 'BASE TABLE' "
 $ WRITE OUTFILE "and object_schema = '" + SCHEMA + "' order by coalesce(object_altered, object_created);"
@@ -133,7 +132,7 @@ $ define/user sys$output [.log]get_tables_'SCHEMA'.log
 $ bsql/username=SYSADM/password="''SYSPASS'"/query="read '[.gen_sql]get_tables_''SCHEMA'.sql'"
 $!
 $ ! Open the file with tables
-$ open/read table_file [.unload_data]get_tables_'SCHEMA'.txt
+$ open/read table_file 'TABLE_DEFS'
 $
 $ ! Loop over each line in the file
 $ loop:
