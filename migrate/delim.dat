@@ -1,0 +1,4 @@
+#data
+column separator '|'
+null indicator '\-'
+;
