@@ -35,7 +35,7 @@ The migration process will unload the SQL schema and all tables with data from R
 First, run:
 
 ```dcl
-@unload_rdb <path to database> <name of database>
+@unload_rdb <path to database> <schema>
 ```
 
 The last argument is used as the schema name in Mimer SQL and to prefix the different generated files in the unload process. In `[.unload_data]`, there will be one SQL schema file that creates all database objects and one text file for each Rdb table containing data.
@@ -50,7 +50,7 @@ When the unload is finished, the migration and loading of the schema and data in
 - `<schema>` should be the same as `<name of database>` in the unload step.
 - `<Mimer SQL user>` is a database user that will be created if it does not exist. If left out, a default user called "mimeruser" is used.
 
-For the specified Mimer SQL user, a schema will be created, and all database objects will be created within that schema. Multiple Rdb databases can be unloaded and loaded using the same Mimer SQL user but with different schema names.
+For the specified Mimer SQL user, a schema will be created, and all database objects will be created within that schema. Multiple Rdb databases can be unloaded and loaded using the same Mimer SQL user but with different schema names. The schema corresponds to the name given by the “declare alias” statement used with the Rdb database.
 
 The `load_mimer.com` script will perform the following steps:
 
@@ -59,7 +59,7 @@ The `load_mimer.com` script will perform the following steps:
 3. Create a databank where database objects will be stored.
 4. Create the Mimer SQL schema for the migrated Rdb database.
 5. Execute the translated SQL schema file using Mimer SQL.
-6. Run `dbanalyzer` on the created schema to optimize the database structure.
+6. Run `dbanalyzer` and apply the suggested changes on the created schema to optimize the database structure.
 7. Load each table that contains data.
 8. Update database statistics for the Mimer SQL database to ensure efficient query execution.
 
