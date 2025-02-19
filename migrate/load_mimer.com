@@ -157,7 +157,7 @@ $ done:
 $   close table_file
 $
 $ WRITE SYS$OUTPUT ""
-$ WRITE SYS$OUTPUT "Updating statitics"
+$ WRITE SYS$OUTPUT "Updating statistics"
 $ bsql/username=SYSADM/password="''SYSPASS'"/query="update statistics for ident SYSTEM"
 $ bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="update statistics for schema cierren"
 $ WRITE SYS$OUTPUT "Finished loading data into Mimer SQL using the database user ''MIMER_USER' and database schema ''SCHEMA'"
