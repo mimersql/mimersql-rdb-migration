@@ -24,6 +24,10 @@ $ ENDIF
 $ IF  P3 .nes. ""
 $   THEN MIMER_USER="''P3'" 
 $ ENDIF
+$
+$! Check that Mimer SQL is installed and started
+$ CALL CHECK_MIMER
+$
 $! Check export directory
 $ TABLE_DEFS = "[.unload_data]''SCHEMA'-TABLES-MIMER.TXT"
 $ WRITE SYS$OUTPUT "Checking directory and files"
@@ -162,3 +166,27 @@ $ bsql/username=SYSADM/password="''SYSPASS'"/query="update statistics for ident 
 $ bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="update statistics for schema cierren"
 $ WRITE SYS$OUTPUT "Finished loading data into Mimer SQL using the database user ''MIMER_USER' and database schema ''SCHEMA'"
 $ WRITE SYS$OUTPUT "The password for the ''MIMER_USER' can be changed with the SQL statement ""alter ident ''MIMER_USER' identified by '<new password>'"""
+$ EXIT
+$
+$! Checks that the Mimer SQL environment is correct
+$ CHECK_MIMER: SUBROUTINE
+$ IF ''F$TRNLNM("MIMER_DATABASE")' .EQS. ""
+$ THEN
+$   WRITE SYS$OUTPUT "MIMER_DATABASE not defined"
+$   GOTO EXIT_ERR
+$ ENDIF
+$ WRITE SYS$OUTPUT "Using Mimer SQL database ''F$TRNLNM("MIMER_DATABASE")'"
+$ MIMCONTROL/STATUS/DCL
+$ IF F$ELEMENT(0,",",MIMER_STATUS) .NES. "Running"
+$ THEN
+$   WRITE SYS$OUTPUT "Mimer SQL is not running"
+$   GOTO EXIT_ERR
+$ ENDIF
+$ WRITE SYS$OUTPUT "Mimer SQL environment is ok"
+$ WRITE SYS$OUTPUT ""
+$ EXIT 1
+$!
+$ EXIT_ERR:
+$ WRITE SYS$OUTPUT "Mimer SQL environment error"
+$ EXIT 4
+$ ENDSUBROUTINE
