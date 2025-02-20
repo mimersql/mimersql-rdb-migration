@@ -1,3 +1,8 @@
 build/
-
+unload_data/
+gen_sql/
+log/
+LOG/
+GEN_SQL/
+UNLOAD_DATA/
 
