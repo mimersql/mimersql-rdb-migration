@@ -124,9 +124,9 @@ $ define/user sys$output [.log]'SCHEMA'_analyze.log
 $ bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="read '[.gen_sql]analyze_schema_''SCHEMA'.sql'"
 $ WRITE SYS$OUTPUT ""
 $ WRITE SYS$OUTPUT "Loading exported data into Mimer SQL"
+$ WRITE SYS$OUTPUT "Log files for the load operations can be found in [.log]"
 $! Load tables in correct order so we don't violate foreign key constraints
 $ OPEN/WRITE OUTFILE [.gen_sql]get_tables_'SCHEMA'.sql
-$ WRITE SYS$OUTPUT "Log files for the load operations can be found in [.log]"
 $ WRITE OUTFILE "log output on '" + "''TABLE_DEFS'" + "';"
 $ WRITE OUTFILE "set silence on;"
 $ WRITE OUTFILE "select object_name from system.objects where object_type = 'BASE TABLE' "
