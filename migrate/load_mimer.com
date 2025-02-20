@@ -163,7 +163,7 @@ $
 $ WRITE SYS$OUTPUT ""
 $ WRITE SYS$OUTPUT "Updating statistics"
 $ bsql/username=SYSADM/password="''SYSPASS'"/query="update statistics for ident SYSTEM"
-$ bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="update statistics for schema cierren"
+$ bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="update statistics for schema ''SCHEMA'"
 $ WRITE SYS$OUTPUT "Finished loading data into Mimer SQL using the database user ''MIMER_USER' and database schema ''SCHEMA'"
 $ WRITE SYS$OUTPUT "The password for the ''MIMER_USER' can be changed with the SQL statement ""alter ident ''MIMER_USER' identified by '<new password>'"""
 $ EXIT
