@@ -18,10 +18,10 @@ $ THEN
 $   WRITE SYS$OUTPUT "Creating [.UNLOAD_DATA] directory"
 $   CRE/DIR [.UNLOAD_DATA]
 $ ELSE
-$   TMP = F$SEARCH("''TABLE_DEFS'")
+$   TMP = F$SEARCH("[.UNLOAD_DATA]''DBNAME'-*.*;*")
 $   IF TMP .NES. ""
 $   THEN
-$       DELETE 'TABLE_DEFS';*
+$       DELETE [.UNLOAD_DATA]'DBNAME'-*.*;*
 $   ENDIF
 $ ENDIF
 $ WRITE SYS$OUTPUT "Check done"
