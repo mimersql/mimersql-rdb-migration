@@ -1,28 +1,31 @@
 $! Create schemas in Mimer SQL and load data
 $!
 $ MIMER_USER = "mimeruser"
-$ MIMER_PASS = "mimerpass"
+$ MIMER_PASS = "gB7Xd92jLmWZ"
+$ SYSPASS=""
 $ IF  P1 .nes. ""
-$   THEN SYSPASS="''P1'" 
+$   THEN SYSPASS="''P1'"
 $ ELSE
-$   SYSPASS=""
 $   WRITE SYS$OUTPUT "Enter SYSADM password"
 $   READ/TIMEOUT=20/PROMPT="Password: " SYS$COMMAND SYSPASS
 $   IF SYSPASS .eqs. ""
 $   THEN
-$       WRITE SYS$OUTPUT "Timeout or empty password, using default SYSADM password"
-$       SYSPASS="SYSADM"
+$       WRITE SYS$OUTPUT "Timeout or empty password. Aborting"
+$       EXIT 4
 $   ENDIF
 $ ENDIF
-$ 
+$
 $ IF  P2 .nes. ""
-$   THEN SCHEMA="''P2'" 
+$   THEN SCHEMA="''P2'"
 $ ELSE
 $   WRITE SYS$OUTPUT "Specify database schema to load into as parameter two"
 $   EXIT 4
 $ ENDIF
 $ IF  P3 .nes. ""
-$   THEN MIMER_USER="''P3'" 
+$   THEN MIMER_USER="''P3'"
+$ ENDIF
+$ IF  P4 .nes. ""
+$   THEN MIMER_PASS="''P4'"
 $ ENDIF
 $
 $! Check that Mimer SQL is installed and started

@@ -1,11 +1,11 @@
 $ IF  P1 .nes. ""
-$   THEN DB="''P1'" 
+$   THEN DB="''P1'"
 $ ELSE
 $   WRITE SYS$OUTPUT "Specify database path as parameter one"
 $   EXIT 4
 $ ENDIF
 $ IF  P2 .nes. ""
-$   THEN DBNAME="''P2'" 
+$   THEN DBNAME="''P2'"
 $ ELSE
 $   WRITE SYS$OUTPUT "Specify database used as parameter one"
 $   WRITE SYS$OUTPUT "This will be used as schema in Mimer SQL"
@@ -26,7 +26,7 @@ $   ENDIF
 $ ENDIF
 $ WRITE SYS$OUTPUT "Check done"
 $ DEFINE/NOLOG EXPORT_DB 'DB'
-$ 
+$
 $ WRITE SYS$OUTPUT "Extracting database schema"
 $ RMU/EXTRACT/Output=[.UNLOAD_DATA]'DBNAME'-SCHEMA-RDB.SQL 'DB'
 $ define/user sys$output 'TABLE_DEFS'
