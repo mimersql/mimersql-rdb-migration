@@ -72,9 +72,6 @@ $! Create directory for generated files scripts or clear it if it exists
 $ IF F$PARSE("[.GEN_SQL]","","DIRECTORY") .EQS. ""
 $ THEN
 $   CRE/DIR [.GEN_SQL]
-$ ELSE
-$   TMP = F$SEARCH("[.GEN_SQL]*.*;*")
-$!   IF TMP .NES. "" THEN DELETE [.GEN_SQL]*.*;*
 $ ENDIF
 $! Create schema
 $!
@@ -168,6 +165,21 @@ $ done:
 $   close table_file
 $
 $ WRITE SYS$OUTPUT ""
+
+$ TMP = F$SEARCH("[.EXTRA_SQL]''SCHEMA'.SQL")
+$ IF TMP .NES. ""
+$ THEN
+$     WRITE SYS$OUTPUT "Executing extra SQL in [.EXTRA_SQL]''SCHEMA'.SQL"
+$     WRITE SYS$OUTPUT "Log operations to [.LOG]''SCHEMA'-EXTRA_SQL.LOG"
+$     OPEN/WRITE OUTFILE [.GEN_SQL]'SCHEMA'-EXTRA_SQL.SQL
+$     WRITE OUTFILE "log input,output on '[.LOG]" + SCHEMA + "-EXTRA_SQL.LOG';"
+$     WRITE OUTFILE "set output off;"
+$     WRITE OUTFILE "set schema ''SCHEMA';"
+$     WRITE OUTFILE "read '[.EXTRA_SQL]" + "''SCHEMA'.SQL';"
+$     CLOSE OUTFILE
+$     define/user sys$output [.LOG]'SCHEMA'-EXTRA_SQL_OUTPUT.LOG
+$     bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="read '[.GEN_SQL]''SCHEMA'-EXTRA_SQL.SQL'"
+$ ENDIF
 $ WRITE SYS$OUTPUT "Updating statistics"
 $ bsql/username=SYSADM/password="''SYSPASS'"/query="update statistics for ident SYSTEM"
 $ bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="update statistics for schema ''SCHEMA'"
