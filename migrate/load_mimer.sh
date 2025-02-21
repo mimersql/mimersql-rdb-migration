@@ -2,8 +2,8 @@
 # Create schemas in Mimer SQL and load data
 
 MIMER_USER="mimeruser"
-MIMER_PASS="mimerpass"
-SYSADM_PASS="SYSADM"
+MIMER_PASS="gB7Xd92jLmWZ"
+SYSADM_PASS=""
 ENCODING="latin1"
 usage()
 {
@@ -33,7 +33,7 @@ for file in ${1}; do
     base_name="${file%%;*}"
     version="${file##*;}"
     
-    # Skip files without a valid version part (e.g., LOGIN.COM without ";<version>")
+    # Skip files without a valid version part (e.g., FILE.TXT without ";<version>")
     if [[ "$base_name" == "$file" ]]; then
         continue
     fi
@@ -170,55 +170,55 @@ fi
 # Translate the Rdb SQL dialect to Mimer SQL
 echo "Translating database schema from Rdb to Mimer SQL, result in ./GEN_SQL"
 sqltranslator --rdb --script --nologo --${ENCODING} ./UNLOAD_DATA/${SCHEMA}-SCHEMA-RDB.SQL ./GEN_SQL/${SCHEMA}-SCHEMA-MIMER.SQL
-echo "Creating database user and databank, log result to ./LOG/create_users_${SCHEMA}.log"
+echo "Creating database user and databank, log result to ./LOG/CREATE_USERS_${SCHEMA}.LOG"
 OS_USER=$USERNAME
-echo "log input,output on './LOG/create_users_${SCHEMA}.log';" > ./GEN_SQL/create_users_${SCHEMA}.sql
-echo "WHENEVER ERROR CONTINUE;" >> ./GEN_SQL/create_users_${SCHEMA}.sql
-echo "create ident ${MIMER_USER} as user identified by '${MIMER_PASS}';" >> ./GEN_SQL/create_users_${SCHEMA}.sql
-echo "drop databank ${SCHEMA}_DB cascade;" >> ./GEN_SQL/create_users_${SCHEMA}.sql
-echo "alter ident ${MIMER_USER} add os_user '${OS_USER}';" >> ./GEN_SQL/create_users_${SCHEMA}.sql
-echo "WHENEVER ERROR EXIT;" >> ./GEN_SQL/create_users_${SCHEMA}.sql
-echo "create databank ${SCHEMA}_DB;" >> ./GEN_SQL/create_users_${SCHEMA}.sql
-echo "grant schema to ${MIMER_USER};" >> ./GEN_SQL/create_users_${SCHEMA}.sql
-echo "grant table on ${SCHEMA}_DB to ${MIMER_USER};" >> ./GEN_SQL/create_users_${SCHEMA}.sql
-echo "grant sequence on ${SCHEMA}_DB to ${MIMER_USER};">> ./GEN_SQL/create_users_${SCHEMA}.sql
-echo "EXIT;" >> ./GEN_SQL/create_users_${SCHEMA}.sql
-bsql --username=SYSADM --password=${SYSADM_PASS} --query="read './GEN_SQL/create_users_${SCHEMA}.sql'" ${MIMER_DATABASE} >> ./LOG/tmp_output.log 2>&1
+echo "log input,output on './LOG/CREATE_USERS_${SCHEMA}.LOG';" > ./GEN_SQL/CREATE_USERS_${SCHEMA}.SQL
+echo "WHENEVER ERROR CONTINUE;" >> ./GEN_SQL/CREATE_USERS_${SCHEMA}.SQL
+echo "create ident ${MIMER_USER} as user identified by '${MIMER_PASS}';" >> ./GEN_SQL/CREATE_USERS_${SCHEMA}.SQL
+echo "drop databank ${SCHEMA}_DB cascade;" >> ./GEN_SQL/CREATE_USERS_${SCHEMA}.SQL
+echo "alter ident ${MIMER_USER} add os_user '${OS_USER}';" >> ./GEN_SQL/CREATE_USERS_${SCHEMA}.SQL
+echo "WHENEVER ERROR EXIT;" >> ./GEN_SQL/CREATE_USERS_${SCHEMA}.SQL
+echo "create databank ${SCHEMA}_DB;" >> ./GEN_SQL/CREATE_USERS_${SCHEMA}.SQL
+echo "grant schema to ${MIMER_USER};" >> ./GEN_SQL/CREATE_USERS_${SCHEMA}.SQL
+echo "grant table on ${SCHEMA}_DB to ${MIMER_USER};" >> ./GEN_SQL/CREATE_USERS_${SCHEMA}.SQL
+echo "grant sequence on ${SCHEMA}_DB to ${MIMER_USER};">> ./GEN_SQL/CREATE_USERS_${SCHEMA}.SQL
+echo "EXIT;" >> ./GEN_SQL/CREATE_USERS_${SCHEMA}.SQL
+bsql --username=SYSADM --password=${SYSADM_PASS} --query="read './GEN_SQL/CREATE_USERS_${SCHEMA}.SQL'" ${MIMER_DATABASE} >> ./LOG/TMP_OUTPUT.LOG 2>&1
 
-echo "Creating ${SCHEMA} schema, log result to ./LOG/create_schema_${SCHEMA}.log"
-echo "log input,output on './LOG/create_schema_${SCHEMA}.log';" > ./GEN_SQL/create_schema_${SCHEMA}.sql
-echo "WHENEVER ERROR CONTINUE;" >> ./GEN_SQL/create_schema_${SCHEMA}.sql
-echo "drop schema ${SCHEMA} cascade;"  >> ./GEN_SQL/create_schema_${SCHEMA}.sql
-echo "WHENEVER ERROR EXIT;"  >> ./GEN_SQL/create_schema_${SCHEMA}.sql
-echo "create schema ${SCHEMA};"  >> ./GEN_SQL/create_schema_${SCHEMA}.sql
-echo "set schema ${SCHEMA};"  >> ./GEN_SQL/create_schema_${SCHEMA}.sql
-echo "WHENEVER ERROR CONTINUE;"  >> ./GEN_SQL/create_schema_${SCHEMA}.sql
-echo "read './GEN_SQL/${SCHEMA}-SCHEMA-MIMER.SQL';"  >> ./GEN_SQL/create_schema_${SCHEMA}.sql
-echo "EXIT;" >> ./GEN_SQL/create_schema_${SCHEMA}.sql
-bsql --username=${MIMER_USER} --password=${MIMER_PASS} --query="read './GEN_SQL/create_schema_${SCHEMA}.sql'" ${MIMER_DATABASE} >> ./LOG/tmp_output.log 2>&1
+echo "Creating ${SCHEMA} schema, log result to ./LOG/CREATE_SCHEMA_${SCHEMA}.LOG"
+echo "log input,output on './LOG/CREATE_SCHEMA_${SCHEMA}.LOG';" > ./GEN_SQL/CREATE_SCHEMA_${SCHEMA}.SQL
+echo "WHENEVER ERROR CONTINUE;" >> ./GEN_SQL/CREATE_SCHEMA_${SCHEMA}.SQL
+echo "drop schema ${SCHEMA} cascade;"  >> ./GEN_SQL/CREATE_SCHEMA_${SCHEMA}.SQL
+echo "WHENEVER ERROR EXIT;"  >> ./GEN_SQL/CREATE_SCHEMA_${SCHEMA}.SQL
+echo "create schema ${SCHEMA};"  >> ./GEN_SQL/CREATE_SCHEMA_${SCHEMA}.SQL
+echo "set schema ${SCHEMA};"  >> ./GEN_SQL/CREATE_SCHEMA_${SCHEMA}.SQL
+echo "WHENEVER ERROR CONTINUE;"  >> ./GEN_SQL/CREATE_SCHEMA_${SCHEMA}.SQL
+echo "read './GEN_SQL/${SCHEMA}-SCHEMA-MIMER.SQL';"  >> ./GEN_SQL/CREATE_SCHEMA_${SCHEMA}.SQL
+echo "EXIT;" >> ./GEN_SQL/CREATE_SCHEMA_${SCHEMA}.SQL
+bsql --username=${MIMER_USER} --password=${MIMER_PASS} --query="read './GEN_SQL/CREATE_SCHEMA_${SCHEMA}.SQL'" ${MIMER_DATABASE} >> ./LOG/TMP_OUTPUT.LOG 2>&1
 
 #Update statistics for SYSTEM
 echo "Update statistics for SYSTEM"
 bsql --username=SYSADM --password=${SYSADM_PASS} --query="update statistics for ident SYSTEM"
 echo "Database schemas created"
 echo ""
-echo "Analyzing database, store results in ./GEN_SQL/${SCHEMA}_analyze.sql"
-dbanalyzer --username=${MIMER_USER} --password=${MIMER_PASS} ${MIMER_DATABASE} > ./GEN_SQL/${SCHEMA}_analyze.sql
-echo "Optimizing database, log results to ./LOG/${SCHEMA}_analyze.log"
-echo "log input,output on './LOG/analyze_schema_${SCHEMA}.log';" > ./GEN_SQL/analyze_schema_${SCHEMA}.sql
-echo "WHENEVER ERROR CONTINUE;" >> ./GEN_SQL/analyze_schema_${SCHEMA}.sql
-echo "read './GEN_SQL/${SCHEMA}_analyze.sql';" >> ./GEN_SQL/analyze_schema_${SCHEMA}.sql
-echo "EXIT;" >> ./GEN_SQL/analyze_schema_${SCHEMA}.sql
-bsql --username=${MIMER_USER} --password=${MIMER_PASS} --query="read './GEN_SQL/analyze_schema_${SCHEMA}.sql'" ${MIMER_DATABASE} >> ./LOG/tmp_output.log 2>&1
+echo "Analyzing database, store results in ./GEN_SQL/${SCHEMA}_ANALYZE.SQL"
+dbanalyzer --username=${MIMER_USER} --password=${MIMER_PASS} ${MIMER_DATABASE} > ./GEN_SQL/${SCHEMA}_ANALYZE.SQL
+echo "Optimizing database, log results to ./LOG/${SCHEMA}_ANALYZE.LOG"
+echo "log input,output on './LOG/ANALYZE_SCHEMA_${SCHEMA}.LOG';" > ./GEN_SQL/ANALYZE_SCHEMA_${SCHEMA}.SQL
+echo "WHENEVER ERROR CONTINUE;" >> ./GEN_SQL/ANALYZE_SCHEMA_${SCHEMA}.SQL
+echo "read './GEN_SQL/${SCHEMA}_ANALYZE.SQL';" >> ./GEN_SQL/ANALYZE_SCHEMA_${SCHEMA}.SQL
+echo "EXIT;" >> ./GEN_SQL/ANALYZE_SCHEMA_${SCHEMA}.SQL
+bsql --username=${MIMER_USER} --password=${MIMER_PASS} --query="read './GEN_SQL/ANALYZE_SCHEMA_${SCHEMA}.SQL'" ${MIMER_DATABASE} >> ./LOG/TMP_OUTPUT.LOG 2>&1
 echo ""
 echo "Loading exported data into Mimer SQL"
 echo "Log files for the load operations can be found in ./LOG/"
 # Load tables in correct order so we don't violate foreign key constraints
-echo "log output on '${TABLE_DEFS}';" > ./GEN_SQL/get_tables_${SCHEMA}.sql
-echo "set silence on;" >> ./GEN_SQL/get_tables_${SCHEMA}.sql >> ./GEN_SQL/get_tables_${SCHEMA}.sql
-echo "select object_name from system.objects where object_type = 'BASE TABLE' " >> ./GEN_SQL/get_tables_${SCHEMA}.sql
-echo "and object_schema = '${SCHEMA}' order by coalesce(object_altered, object_created);" >> ./GEN_SQL/get_tables_${SCHEMA}.sql
-bsql --username=SYSADM --password=${SYSADM_PASS} --query="read './GEN_SQL/get_tables_${SCHEMA}.sql'" ${MIMER_DATABASE} >> ./LOG/tmp_output.log 2>&1
+echo "log output on '${TABLE_DEFS}';" > ./GEN_SQL/GET_TABLES_${SCHEMA}.SQL
+echo "set silence on;" >> ./GEN_SQL/GET_TABLES_${SCHEMA}.SQL >> ./GEN_SQL/GET_TABLES_${SCHEMA}.SQL
+echo "select object_name from system.objects where object_type = 'BASE TABLE' " >> ./GEN_SQL/GET_TABLES_${SCHEMA}.SQL
+echo "and object_schema = '${SCHEMA}' order by coalesce(object_altered, object_created);" >> ./GEN_SQL/GET_TABLES_${SCHEMA}.SQL
+bsql --username=SYSADM --password=${SYSADM_PASS} --query="read './GEN_SQL/GET_TABLES_${SCHEMA}.SQL'" ${MIMER_DATABASE} >> ./LOG/TMP_OUTPUT.LOG 2>&1
 #
 
 #Open the file with tables
@@ -227,7 +227,7 @@ while IFS= read -r line; do
     if [ "$tab" != "" ]; then
         if [ -e ./UNLOAD_DATA/${SCHEMA}-${tab}.TXT ]; then
             echo "Loading $tab"
-            LOAD_CMD="load from 'delim.dat', './UNLOAD_DATA/${SCHEMA}-${tab}.TXT' as ${ENCODING} log './LOG/LOAD_${SCHEMA}-${tab}.log' insert into ${SCHEMA}.${tab}"
+            LOAD_CMD="load from 'DELIM.DAT', './UNLOAD_DATA/${SCHEMA}-${tab}.TXT' as ${ENCODING} log './LOG/LOAD_${SCHEMA}-${tab}.LOG' insert into ${SCHEMA}.${tab}"
             mimload --username=${MIMER_USER} --password=${MIMER_PASS} "${LOAD_CMD}" ${MIMER_DATABASE}
 #        else
 #            echo "Skipping $tab, no data file found"
