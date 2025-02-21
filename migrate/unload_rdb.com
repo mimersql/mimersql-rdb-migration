@@ -12,11 +12,11 @@ $   WRITE SYS$OUTPUT "This will be used as schema in Mimer SQL"
 $   EXIT 4
 $ ENDIF
 $ WRITE SYS$OUTPUT "Checking directory and files"
-$ TABLE_DEFS = "[.unload_data]''DBNAME'-TABLES-RDB.TXT"
-$ IF F$PARSE("[.unload_data]","","DIRECTORY") .EQS. ""
+$ TABLE_DEFS = "[.UNLOAD_DATA]''DBNAME'-TABLES-RDB.TXT"
+$ IF F$PARSE("[.UNLOAD_DATA]","","DIRECTORY") .EQS. ""
 $ THEN
-$   WRITE SYS$OUTPUT "Creating [.unload_data] directory"
-$   CRE/DIR [.unload_data]
+$   WRITE SYS$OUTPUT "Creating [.UNLOAD_DATA] directory"
+$   CRE/DIR [.UNLOAD_DATA]
 $ ELSE
 $   TMP = F$SEARCH("''TABLE_DEFS'")
 $   IF TMP .NES. ""
@@ -28,7 +28,7 @@ $ WRITE SYS$OUTPUT "Check done"
 $ DEFINE/NOLOG EXPORT_DB 'DB'
 $ 
 $ WRITE SYS$OUTPUT "Extracting database schema"
-$ RMU/EXTRACT/Output=[.unload_data]'DBNAME'-SCHEMA-RDB.SQL 'DB'
+$ RMU/EXTRACT/Output=[.UNLOAD_DATA]'DBNAME'-SCHEMA-RDB.SQL 'DB'
 $ define/user sys$output 'TABLE_DEFS'
 $run sql$
 attach 'f EXPORT_DB';
@@ -48,7 +48,7 @@ $ loop:
 $   read/end_of_file=done input_chan line
 $   tab = f$edit(line, "TRIM")
 $   write sys$output "Unloading ''tab'"
-$   rmu/unload/RECORD_DEFINITION=(FORMAT=DELIMITED_TEXT, PREFIX="", SUFFIX="", separator="|", null="\-") 'DB' 'tab' [.unload_data]'DBNAME'-'tab'.txt
+$   rmu/unload/RECORD_DEFINITION=(FORMAT=DELIMITED_TEXT, PREFIX="", SUFFIX="", separator="|", null="\-") 'DB' 'tab' [.UNLOAD_DATA]'DBNAME'-'tab'.TXT
 $   goto loop
 $
 $ ! Close the file and exit

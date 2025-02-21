@@ -29,15 +29,15 @@ $! Check that Mimer SQL is installed and started
 $ CALL CHECK_MIMER
 $
 $! Check export directory
-$ TABLE_DEFS = "[.unload_data]''SCHEMA'-TABLES-MIMER.TXT"
+$ TABLE_DEFS = "[.UNLOAD_DATA]''SCHEMA'-TABLES-MIMER.TXT"
 $ WRITE SYS$OUTPUT "Checking directory and files"
-$ IF F$PARSE("[.unload_data]","","DIRECTORY") .EQS. ""
+$ IF F$PARSE("[.UNLOAD_DATA]","","DIRECTORY") .EQS. ""
 $ THEN
-$   WRITE SYS$OUTPUT "There is no unloaded data to load, i.e., there is no directory [.UNLOADED_DATA]"
+$   WRITE SYS$OUTPUT "There is no unloaded data to load, i.e., there is no directory [.UNLOAD_DATA]"
 $   WRITE SYS$OUTPUT "present."
 $   WRITE SYS$OUTPUT ""
 $   WRITE SYS$OUTPUT "To unload data from an Rdb system you must first runt the command procedure"
-$   WRITE SYS$OUTPUT "unload_rdb.com. It will create a directory [.UNLOADED_DATA] with all content"
+$   WRITE SYS$OUTPUT "unload_rdb.com. It will create a directory [.UNLOAD_DATA] with all content"
 $   WRITE SYS$OUTPUT "and information from Rdb required to perform a load into Mimer SQL. If the"
 $   WRITE SYS$OUTPUT "unload was done on a different system, you must first transfer this directory"
 $   WRITE SYS$OUTPUT "with all content to the system with Mimer SQL, before attempting a load."
@@ -48,40 +48,40 @@ $   IF TMP .NES. ""
 $   THEN
 $       DELETE 'TABLE_DEFS';*
 $   ENDIF
-$   TMP = F$SEARCH("[.unload_data]''SCHEMA'-SCHEMA-RDB.SQL")
+$   TMP = F$SEARCH("[.UNLOAD_DATA]''SCHEMA'-SCHEMA-RDB.SQL")
 $   IF TMP .EQS. ""
 $   THEN
-$       WRITE SYS$OUTPUT "[.unload_data]''SCHEMA'-SCHEMA-RDB.SQL not found"
+$       WRITE SYS$OUTPUT "[.UNLOAD_DATA]''SCHEMA'-SCHEMA-RDB.SQL not found"
 $       EXIT 4
 $   ENDIF
 $ ENDIF
 $ WRITE SYS$OUTPUT "Check done"
 $
 $! Create directory for log files or clear it if it exists
-$ IF F$PARSE("[.log]","","DIRECTORY") .EQS. ""
+$ IF F$PARSE("[.LOG]","","DIRECTORY") .EQS. ""
 $ THEN
-$   CRE/DIR [.log]
+$   CRE/DIR [.LOG]
 $ ELSE
-$   TMP = F$SEARCH("[.log]*.*;*")
-$   IF TMP .NES. "" THEN DELETE [.log]*.*;*
+$   TMP = F$SEARCH("[.LOG]*.*;*")
+$   IF TMP .NES. "" THEN DELETE [.LOG]*.*;*
 $ ENDIF
 $! Create directory for generated files scripts or clear it if it exists
-$ IF F$PARSE("[.gen_sql]","","DIRECTORY") .EQS. ""
+$ IF F$PARSE("[.GEN_SQL]","","DIRECTORY") .EQS. ""
 $ THEN
-$   CRE/DIR [.gen_sql]
+$   CRE/DIR [.GEN_SQL]
 $ ELSE
-$   TMP = F$SEARCH("[.gen_sql]*.*;*")
-$!   IF TMP .NES. "" THEN DELETE [.gen_sql]*.*;*
+$   TMP = F$SEARCH("[.GEN_SQL]*.*;*")
+$!   IF TMP .NES. "" THEN DELETE [.GEN_SQL]*.*;*
 $ ENDIF
 $! Create schema
 $!
 $! Translate the Rdb SQL dialect to Mimer SQL
-$ WRITE SYS$OUTPUT "Translating database schema from Rdb to Mimer SQL, result in [.gen_sql]"
-$ sqltranslator/rdb/script/nologo [.unload_data]'SCHEMA'-SCHEMA-RDB.SQL [.gen_sql]'SCHEMA'-SCHEMA-MIMER.SQL
-$ WRITE SYS$OUTPUT "Creating database user and databank, log result to [.log]create_users_''SCHEMA'.log"
+$ WRITE SYS$OUTPUT "Translating database schema from Rdb to Mimer SQL, result in [.GEN_SQL]"
+$ sqltranslator/rdb/script/nologo [.UNLOAD_DATA]'SCHEMA'-SCHEMA-RDB.SQL [.GEN_SQL]'SCHEMA'-SCHEMA-MIMER.SQL
+$ WRITE SYS$OUTPUT "Creating database user and databank, log result to [.LOG]CREATE_USERS_''SCHEMA'.LOG"
 $ OS_USER = "'" + f$edit(f$getjpi("","USERNAME"),"TRIM") + "'"
-$ OPEN/WRITE OUTFILE [.gen_sql]create_users_'SCHEMA'.sql
-$ WRITE OUTFILE "log input,output on '[.log]create_users_''SCHEMA'.log';"
+$ OPEN/WRITE OUTFILE [.GEN_SQL]CREATE_USERS_'SCHEMA'.SQL
+$ WRITE OUTFILE "log input,output on '[.LOG]CREATE_USERS_''SCHEMA'.LOG';"
 $ WRITE OUTFILE "WHENEVER ERROR CONTINUE;"
 $ WRITE OUTFILE "create ident ''MIMER_USER' as user identified by '" + MIMER_PASS +"';"
 $ WRITE OUTFILE "drop databank ''SCHEMA'_DB cascade;"
@@ -93,51 +93,51 @@ $ WRITE OUTFILE "grant table on ''SCHEMA'_DB to ''MIMER_USER';"
 $ WRITE OUTFILE "grant sequence on ''SCHEMA'_DB to ''MIMER_USER';"
 $ WRITE OUTFILE "EXIT;"
 $ CLOSE OUTFILE
-$ define/user sys$output [.log]tmp_output.log
-$ bsql/username=SYSADM/password="''SYSPASS'"/query="read '[.gen_sql]create_users_''SCHEMA'.sql'"
-$ WRITE SYS$OUTPUT "Creating ''SCHEMA' schema, log result to [.log]create_schema_''SCHEMA'.log"
-$ OPEN/WRITE OUTFILE [.gen_sql]create_schema_'SCHEMA'.sql
-$ WRITE OUTFILE "log input,output on '[.log]create_schema_''SCHEMA'.log';"
+$ define/user sys$output [.LOG]TMP_OUTPUT.LOG
+$ bsql/username=SYSADM/password="''SYSPASS'"/query="read '[.GEN_SQL]CREATE_USERS_''SCHEMA'.SQL'"
+$ WRITE SYS$OUTPUT "Creating ''SCHEMA' schema, log result to [.LOG]CREATE_SCHEMA_''SCHEMA'.LOG"
+$ OPEN/WRITE OUTFILE [.GEN_SQL]create_schema_'SCHEMA'.SQL
+$ WRITE OUTFILE "log input,output on '[.LOG]CREATE_SCHEMA_''SCHEMA'.LOG';"
 $ WRITE OUTFILE "WHENEVER ERROR CONTINUE;"
 $ WRITE OUTFILE "drop schema ''SCHEMA' cascade;"
 $ WRITE OUTFILE "WHENEVER ERROR EXIT;"
 $ WRITE OUTFILE "create schema ''SCHEMA';"
 $ WRITE OUTFILE "set schema ''SCHEMA';"
 $ WRITE OUTFILE "WHENEVER ERROR CONTINUE;"
-$ WRITE OUTFILE "read '[.gen_sql]" + SCHEMA + "-SCHEMA-MIMER.SQL';"
+$ WRITE OUTFILE "read '[.GEN_SQL]" + SCHEMA + "-SCHEMA-MIMER.SQL';"
 $ WRITE OUTFILE "EXIT;"
 $ CLOSE OUTFILE
-$ define/user sys$output [.log]tmp_output.log
-$ bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="read '[.gen_sql]create_schema_''SCHEMA'.sql'"
+$ define/user sys$output [.LOG]TMP_OUTPUT.LOG
+$ bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="read '[.GEN_SQL]CREATE_SCHEMA_''SCHEMA'.SQL'"
 $ !Update statistics for SYSTEM
 $ WRITE SYS$OUTPUT "Update statistics for SYSTEM"
 $ bsql/username=SYSADM/password="''SYSPASS'"/query="update statistics for ident SYSTEM"
 $ WRITE SYS$OUTPUT "Database schemas created"
 $ WRITE SYS$OUTPUT ""
-$ WRITE SYS$OUTPUT "Analyzing database, store results in [.gen_sql]''SCHEMA'_analyze.sql"
-$ define/user sys$output [.gen_sql]'SCHEMA'_analyze.sql
+$ WRITE SYS$OUTPUT "Analyzing database, store results in [.GEN_SQL]''SCHEMA'_ANALYZE.SQL"
+$ define/user sys$output [.GEN_SQL]'SCHEMA'_analyze.SQL
 $ dbanalyzer/username="''MIMER_USER'"/password="''MIMER_PASS'"
-$ WRITE SYS$OUTPUT "Optimizing database, log results to [.log]''SCHEMA'_analyze.log"
-$ OPEN/WRITE OUTFILE [.gen_sql]analyze_schema_'SCHEMA'.sql
-$ WRITE OUTFILE "log input,output on '[.log]analyze_schema_''SCHEMA'.log';"
+$ WRITE SYS$OUTPUT "Optimizing database, log results to [.LOG]''SCHEMA'_ANALYZE.LOG"
+$ OPEN/WRITE OUTFILE [.GEN_SQL]analyze_schema_'SCHEMA'.SQL
+$ WRITE OUTFILE "log input,output on '[.LOG]ANALYZE_SCHEMA_''SCHEMA'.LOG';"
 $ WRITE OUTFILE "WHENEVER ERROR CONTINUE;"
-$ WRITE OUTFILE "read '[.gen_sql]" + SCHEMA + "_analyze.sql';"
+$ WRITE OUTFILE "read '[.GEN_SQL]" + SCHEMA + "_ANALYZE.SQL';"
 $ WRITE OUTFILE "EXIT;"
 $ CLOSE OUTFILE
-$ define/user sys$output [.log]'SCHEMA'_analyze.log
-$ bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="read '[.gen_sql]analyze_schema_''SCHEMA'.sql'"
+$ define/user sys$output [.LOG]'SCHEMA'_analyze.LOG
+$ bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="read '[.GEN_SQL]ANALYZE_SCHEMA_''SCHEMA'.SQL'"
 $ WRITE SYS$OUTPUT ""
 $ WRITE SYS$OUTPUT "Loading exported data into Mimer SQL"
-$ WRITE SYS$OUTPUT "Log files for the load operations can be found in [.log]"
+$ WRITE SYS$OUTPUT "Log files for the load operations can be found in [.LOG]"
 $! Load tables in correct order so we don't violate foreign key constraints
-$ OPEN/WRITE OUTFILE [.gen_sql]get_tables_'SCHEMA'.sql
+$ OPEN/WRITE OUTFILE [.GEN_SQL]GET_TABLES_'SCHEMA'.SQL
 $ WRITE OUTFILE "log output on '" + "''TABLE_DEFS'" + "';"
 $ WRITE OUTFILE "set silence on;"
 $ WRITE OUTFILE "select object_name from system.objects where object_type = 'BASE TABLE' "
 $ WRITE OUTFILE "and object_schema = '" + SCHEMA + "' order by coalesce(object_altered, object_created);"
 $ CLOSE OUTFILE
-$ define/user sys$output [.log]get_tables_'SCHEMA'.log
-$ bsql/username=SYSADM/password="''SYSPASS'"/query="read '[.gen_sql]get_tables_''SCHEMA'.sql'"
+$ define/user sys$output [.LOG]get_tables_'SCHEMA'.LOG
+$ bsql/username=SYSADM/password="''SYSPASS'"/query="read '[.GEN_SQL]GET_TABLES_''SCHEMA'.SQL'"
 $!
 $ ! Open the file with tables
 $ open/read table_file 'TABLE_DEFS'
@@ -148,11 +148,11 @@ $   read/end_of_file=done table_file line
 $   tab = f$edit(line, "TRIM")
 $   IF tab .NES. ""
 $   THEN
-$       TMP = F$SEARCH("[.unload_data]''SCHEMA'-''tab'.TXT")
+$       TMP = F$SEARCH("[.UNLOAD_DATA]''SCHEMA'-''tab'.TXT")
 $       IF TMP .NES. ""
 $       THEN
 $           write sys$output "Loading ''tab'"
-$           LOAD_CMD = """" + "load from 'delim.dat', '[.unload_data]" + SCHEMA + "-" + tab + ".txt' as LATIN1 log '[.log]LOAD_" + SCHEMA + "-" + tab + ".log' insert into " + SCHEMA + "." + tab + """"
+$           LOAD_CMD = """" + "load from 'DELIM.DAT', '[.UNLOAD_DATA]" + SCHEMA + "-" + tab + ".TXT' as LATIN1 log '[.LOG]LOAD_" + SCHEMA + "-" + tab + ".LOG' insert into " + SCHEMA + "." + tab + """"
 $           mimload/user="''MIMER_USER'"/password="''MIMER_PASS'" 'LOAD_CMD'
 $!       ELSE
 $!           WRITE SYS$OUTPUT "Skipping ''tab'"
