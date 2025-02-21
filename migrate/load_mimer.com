@@ -33,10 +33,14 @@ $ TABLE_DEFS = "[.unload_data]''SCHEMA'-TABLES-MIMER.TXT"
 $ WRITE SYS$OUTPUT "Checking directory and files"
 $ IF F$PARSE("[.unload_data]","","DIRECTORY") .EQS. ""
 $ THEN
-$   WRITE SYS$OUTPUT "The directory [.unload_data] with unloaded data not found"
-$   WRITE SYS$OUTPUT "Run @unload_rdb on the machine that have Rdb first."
-$   WRITE SYS$OUTPUT "If different machines are being used, transer the [.unload_data]"
-$   WRITE SYS$OUTPUT "directory to the machine running Mimer SQL."
+$   WRITE SYS$OUTPUT "There is no unloaded data to load, i.e., there is no directory [.UNLOADED_DATA]"
+$   WRITE SYS$OUTPUT "present."
+$   WRITE SYS$OUTPUT ""
+$   WRITE SYS$OUTPUT "To unload data from an Rdb system you must first runt the command procedure"
+$   WRITE SYS$OUTPUT "unload_rdb.com. It will create a directory [.UNLOADED_DATA] with all content"
+$   WRITE SYS$OUTPUT "and information from Rdb required to perform a load into Mimer SQL. If the"
+$   WRITE SYS$OUTPUT "unload was done on a different system, you must first transfer this directory"
+$   WRITE SYS$OUTPUT "with all content to the system with Mimer SQL, before attempting a load."
 $   EXIT 4
 $ ELSE
 $   TMP = F$SEARCH("''TABLE_DEFS'")
