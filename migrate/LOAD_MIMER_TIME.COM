@@ -1,0 +1,203 @@
+$! Create schemas in Mimer SQL and load data
+$!
+$ MIMER_USER = "mimeruser"
+$ MIMER_PASS = "gB7Xd92jLmWZ"
+$ SYSPASS=""
+$ IF  P1 .nes. ""
+$   THEN SYSPASS="''P1'"
+$ ELSE
+$   WRITE SYS$OUTPUT "Enter SYSADM password"
+$   READ/TIMEOUT=20/PROMPT="Password: " SYS$COMMAND SYSPASS
+$   IF SYSPASS .eqs. ""
+$   THEN
+$       WRITE SYS$OUTPUT "Timeout or empty password. Aborting"
+$       EXIT 4
+$   ENDIF
+$ ENDIF
+$
+$ IF  P2 .nes. ""
+$   THEN SCHEMA="''P2'"
+$ ELSE
+$   WRITE SYS$OUTPUT "Specify database schema to load into as parameter two"
+$   EXIT 4
+$ ENDIF
+$ IF  P3 .nes. ""
+$   THEN MIMER_USER="''P3'"
+$ ENDIF
+$ IF  P4 .nes. ""
+$   THEN MIMER_PASS="''P4'"
+$ ENDIF
+$
+$! Check that Mimer SQL is installed and started
+$ CALL CHECK_MIMER
+$
+$! Check export directory
+$ TABLE_DEFS = "[.UNLOAD_DATA]''SCHEMA'-TABLES-MIMER.TXT"
+$ WRITE SYS$OUTPUT "Checking directory and files"
+$ IF F$PARSE("[.UNLOAD_DATA]","","DIRECTORY") .EQS. ""
+$ THEN
+$   WRITE SYS$OUTPUT "There is no unloaded data to load, i.e., there is no directory [.UNLOAD_DATA]"
+$   WRITE SYS$OUTPUT "present."
+$   WRITE SYS$OUTPUT ""
+$   WRITE SYS$OUTPUT "To unload data from an Rdb system you must first runt the command procedure"
+$   WRITE SYS$OUTPUT "unload_rdb.com. It will create a directory [.UNLOAD_DATA] with all content"
+$   WRITE SYS$OUTPUT "and information from Rdb required to perform a load into Mimer SQL. If the"
+$   WRITE SYS$OUTPUT "unload was done on a different system, you must first transfer this directory"
+$   WRITE SYS$OUTPUT "with all content to the system with Mimer SQL, before attempting a load."
+$   EXIT 4
+$ ELSE
+$   TMP = F$SEARCH("''TABLE_DEFS'")
+$   IF TMP .NES. ""
+$   THEN
+$       DELETE 'TABLE_DEFS';*
+$   ENDIF
+$   TMP = F$SEARCH("[.UNLOAD_DATA]''SCHEMA'-SCHEMA-RDB.SQL")
+$   IF TMP .EQS. ""
+$   THEN
+$       WRITE SYS$OUTPUT "[.UNLOAD_DATA]''SCHEMA'-SCHEMA-RDB.SQL not found"
+$       EXIT 4
+$   ENDIF
+$ ENDIF
+$ WRITE SYS$OUTPUT "Check done"
+$
+$! Create directory for log files or clear it if it exists
+$ IF F$PARSE("[.LOG]","","DIRECTORY") .EQS. ""
+$ THEN
+$   CRE/DIR [.LOG]
+$ ELSE
+$   TMP = F$SEARCH("[.LOG]*.*;*")
+$   IF TMP .NES. "" THEN DELETE [.LOG]*.*;*
+$ ENDIF
+$! Create directory for generated files scripts or clear it if it exists
+$ IF F$PARSE("[.GEN_SQL]","","DIRECTORY") .EQS. ""
+$ THEN
+$   CRE/DIR [.GEN_SQL]
+$ ENDIF
+$! Create schema
+$!
+$! Translate the Rdb SQL dialect to Mimer SQL
+$ WRITE SYS$OUTPUT "Translating database schema from Rdb to Mimer SQL, result in [.GEN_SQL]"
+$ sqltranslator/rdb/script/nologo [.UNLOAD_DATA]'SCHEMA'-SCHEMA-RDB.SQL [.GEN_SQL]'SCHEMA'-SCHEMA-MIMER.SQL
+$ WRITE SYS$OUTPUT "Creating database user and databank, log result to [.LOG]CREATE_USERS_''SCHEMA'.LOG"
+$ OS_USER = "'" + f$edit(f$getjpi("","USERNAME"),"TRIM") + "'"
+$ OPEN/WRITE OUTFILE [.GEN_SQL]CREATE_USERS_'SCHEMA'.SQL
+$ WRITE OUTFILE "log input,output on '[.LOG]CREATE_USERS_''SCHEMA'.LOG';"
+$ WRITE OUTFILE "WHENEVER ERROR CONTINUE;"
+$ WRITE OUTFILE "create ident ''MIMER_USER' as user identified by '" + MIMER_PASS +"';"
+$ WRITE OUTFILE "drop databank ''SCHEMA'_DB cascade;"
+$ WRITE OUTFILE "alter ident ''MIMER_USER' add os_user ''OS_USER';"
+$ WRITE OUTFILE "WHENEVER ERROR EXIT;"
+$ WRITE OUTFILE "create databank ''SCHEMA'_DB;"
+$ WRITE OUTFILE "grant schema to ''MIMER_USER';"
+$ WRITE OUTFILE "grant table on ''SCHEMA'_DB to ''MIMER_USER';"
+$ WRITE OUTFILE "grant sequence on ''SCHEMA'_DB to ''MIMER_USER';"
+$ WRITE OUTFILE "EXIT;"
+$ CLOSE OUTFILE
+$ define/user sys$output [.LOG]TMP_OUTPUT.LOG
+$ bsql/username=SYSADM/password="''SYSPASS'"/query="read '[.GEN_SQL]CREATE_USERS_''SCHEMA'.SQL'"
+$ WRITE SYS$OUTPUT "Creating ''SCHEMA' schema, log result to [.LOG]CREATE_SCHEMA_''SCHEMA'.LOG"
+$ OPEN/WRITE OUTFILE [.GEN_SQL]create_schema_'SCHEMA'.SQL
+$ WRITE OUTFILE "log input,output on '[.LOG]CREATE_SCHEMA_''SCHEMA'.LOG';"
+$ WRITE OUTFILE "WHENEVER ERROR CONTINUE;"
+$ WRITE OUTFILE "drop schema ''SCHEMA' cascade;"
+$ WRITE OUTFILE "WHENEVER ERROR EXIT;"
+$ WRITE OUTFILE "create schema ''SCHEMA';"
+$ WRITE OUTFILE "set schema ''SCHEMA';"
+$ WRITE OUTFILE "WHENEVER ERROR CONTINUE;"
+$ WRITE OUTFILE "read '[.GEN_SQL]" + SCHEMA + "-SCHEMA-MIMER.SQL';"
+$ WRITE OUTFILE "EXIT;"
+$ CLOSE OUTFILE
+$ define/user sys$output [.LOG]TMP_OUTPUT.LOG
+$ bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="read '[.GEN_SQL]CREATE_SCHEMA_''SCHEMA'.SQL'"
+$ !Update statistics for SYSTEM
+$ WRITE SYS$OUTPUT "Update statistics for SYSTEM"
+$ bsql/username=SYSADM/password="''SYSPASS'"/query="update statistics for ident SYSTEM"
+$ WRITE SYS$OUTPUT "Database schemas created"
+$ WRITE SYS$OUTPUT ""
+$ WRITE SYS$OUTPUT "Analyzing database, store results in [.GEN_SQL]''SCHEMA'_ANALYZE.SQL"
+$ define/user sys$output [.GEN_SQL]'SCHEMA'_analyze.SQL
+$ dbanalyzer/username="''MIMER_USER'"/password="''MIMER_PASS'"
+$ WRITE SYS$OUTPUT "Optimizing database, log results to [.LOG]''SCHEMA'_ANALYZE.LOG"
+$ OPEN/WRITE OUTFILE [.GEN_SQL]analyze_schema_'SCHEMA'.SQL
+$ WRITE OUTFILE "log input,output on '[.LOG]ANALYZE_SCHEMA_''SCHEMA'.LOG';"
+$ WRITE OUTFILE "WHENEVER ERROR CONTINUE;"
+$ WRITE OUTFILE "read '[.GEN_SQL]" + SCHEMA + "_ANALYZE.SQL';"
+$ WRITE OUTFILE "EXIT;"
+$ CLOSE OUTFILE
+$ define/user sys$output [.LOG]'SCHEMA'_analyze.LOG
+$ bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="read '[.GEN_SQL]ANALYZE_SCHEMA_''SCHEMA'.SQL'"
+$ WRITE SYS$OUTPUT ""
+$ WRITE SYS$OUTPUT "Loading exported data into Mimer SQL"
+$ WRITE SYS$OUTPUT "Log files for the load operations can be found in [.LOG]"
+$! Load tables in correct order so we don't violate foreign key constraints
+$ OPEN/WRITE OUTFILE [.GEN_SQL]GET_TABLES_'SCHEMA'.SQL
+$ WRITE OUTFILE "log output on '" + "''TABLE_DEFS'" + "';"
+$ WRITE OUTFILE "set silence on;"
+$ WRITE OUTFILE "select object_name from system.objects where object_type = 'BASE TABLE' "
+$ WRITE OUTFILE "and object_schema = '" + SCHEMA + "' order by coalesce(object_altered, object_created);"
+$ CLOSE OUTFILE
+$ define/user sys$output [.LOG]get_tables_'SCHEMA'.LOG
+$ bsql/username=SYSADM/password="''SYSPASS'"/query="read '[.GEN_SQL]GET_TABLES_''SCHEMA'.SQL'"
+$!
+$ START = F$CVTIME(,"ABSOLUTE")
+$ ! Open the file with tables
+$ open/read table_file 'TABLE_DEFS'
+$! In case we aborted the load earlier, close and open the file again
+$ close table_file
+$ open/read table_file 'TABLE_DEFS'
+$
+$ ! Loop over each line in the file
+$ loop:
+$   read/end_of_file=done table_file line
+$   tab = f$edit(line, "TRIM")
+$   IF tab .NES. ""
+$   THEN
+$       TMP = F$SEARCH("[.UNLOAD_DATA]''SCHEMA'-''tab'.TXT")
+$       IF TMP .NES. ""
+$       THEN
+$           write sys$output "Loading ''tab'"
+$           LOAD_CMD = """" + "load from 'DELIM.DAT', '[.UNLOAD_DATA]" + SCHEMA + "-" + tab + ".TXT' as LATIN1 log '[.LOG]LOAD_" + SCHEMA + "-" + tab + ".LOG' insert into " + SCHEMA + "." + tab + """"
+$           mimload/user="''MIMER_USER'"/password="''MIMER_PASS'" 'LOAD_CMD'
+$!       ELSE
+$!           WRITE SYS$OUTPUT "Skipping ''tab'"
+$       ENDIF
+$   ENDIF
+$   goto loop
+$
+$ ! Close the file and exit
+$ done:
+$   close table_file
+$ END = F$CVTIME(,"ABSOLUTE")
+$ ELAPSED = F$DELTA_TIME(START, END)
+$ WRITE SYS$OUTPUT "Load done in: ", ELAPSED
+$
+$ WRITE SYS$OUTPUT ""
+$ WRITE SYS$OUTPUT "Updating statistics"
+$ bsql/username=SYSADM/password="''SYSPASS'"/query="update statistics for ident SYSTEM"
+$ bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="update statistics for schema ''SCHEMA'"
+$ WRITE SYS$OUTPUT "Finished loading data into Mimer SQL using the database user ''MIMER_USER' and database schema ''SCHEMA'"
+$ WRITE SYS$OUTPUT "The password for the ''MIMER_USER' can be changed with the SQL statement ""alter ident ''MIMER_USER' identified by '<new password>'"""
+$ EXIT
+$
+$! Checks that the Mimer SQL environment is correct
+$ CHECK_MIMER: SUBROUTINE
+$ IF ''F$TRNLNM("MIMER_DATABASE")' .EQS. ""
+$ THEN
+$   WRITE SYS$OUTPUT "MIMER_DATABASE not defined"
+$   GOTO EXIT_ERR
+$ ENDIF
+$ WRITE SYS$OUTPUT "Using Mimer SQL database ''F$TRNLNM("MIMER_DATABASE")'"
+$ MIMCONTROL/STATUS/DCL
+$ IF F$ELEMENT(0,",",MIMER_STATUS) .NES. "Running"
+$ THEN
+$   WRITE SYS$OUTPUT "Mimer SQL is not running"
+$   GOTO EXIT_ERR
+$ ENDIF
+$ WRITE SYS$OUTPUT "Mimer SQL environment is ok"
+$ WRITE SYS$OUTPUT ""
+$ EXIT 1
+$!
+$ EXIT_ERR:
+$ WRITE SYS$OUTPUT "Mimer SQL environment error"
+$ EXIT 4
+$ ENDSUBROUTINE
