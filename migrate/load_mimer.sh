@@ -236,6 +236,16 @@ while IFS= read -r line; do
 done < ${TABLE_DEFS}
 echo "Finished loading data"
 echo ""
+if [ -e ./EXTRA_SQL/${SCHEMA}.SQL ]; then
+    echo "Executing extra SQL in ./EXTRA_SQL/${SCHEMA}.SQL"
+    echo "Log operations to ./LOG/${SCHEMA}-EXTRA_SQL.LOG"
+    echo "log input,output on './LOG/${SCHEMA}-EXTRA_SQL.LOG';" > ./GEN_SQL/${SCHEMA}-EXTRA_SQL.SQL
+    echo "set output off;" >> ./GEN_SQL/${SCHEMA}-EXTRA_SQL.SQL
+    echo "set schema ${SCHEMA};" >> ./GEN_SQL/${SCHEMA}-EXTRA_SQL.SQL
+    echo "read './EXTRA_SQL/${SCHEMA}.SQL';" >> ./GEN_SQL/${SCHEMA}-EXTRA_SQL.SQL
+    echo "EXIT;" >> ./GEN_SQL/${SCHEMA}-EXTRA_SQL.SQL
+    bsql --username=${MIMER_USER} --password=${MIMER_PASS} --query="read './GEN_SQL/${SCHEMA}-EXTRA_SQL.SQL'" >> ./LOG/TMP_OUTPUT.LOG 2>&1
+fi
 echo "Updating statistics"
 bsql --username=SYSADM --password=${SYSADM_PASS} --query="update statistics for ident SYSTEM" ${MIMER_DATABASE}
 bsql --username=${MIMER_USER} --password=${MIMER_PASS} --query="update statistics for schema ${SCHEMA}" ${MIMER_DATABASE}
