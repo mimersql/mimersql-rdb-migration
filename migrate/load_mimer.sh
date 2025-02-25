@@ -240,6 +240,6 @@ echo "Updating statistics"
 bsql --username=SYSADM --password=${SYSADM_PASS} --query="update statistics for ident SYSTEM" ${MIMER_DATABASE}
 bsql --username=${MIMER_USER} --password=${MIMER_PASS} --query="update statistics for schema ${SCHEMA}" ${MIMER_DATABASE}
 echo "Finished loading data into Mimer SQL using the database user ${MIMER_USER} and database schema ${SCHEMA}"
-echo "The password for the ${MIMER_USER} can be changed with the SQL statement ""alter ident ${MIMER_USER} identified by '<new password>'"""
+echo "The password for the Mimer SQL user ${MIMER_USER} can be changed with the SQL statement ""alter ident ${MIMER_USER} identified by '<new password>'"""
 exit
 
