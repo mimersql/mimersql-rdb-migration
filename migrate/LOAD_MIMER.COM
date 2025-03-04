@@ -3,6 +3,7 @@ $!
 $ MIMER_USER = "mimeruser"
 $ MIMER_PASS = "gB7Xd92jLmWZ"
 $ SYSPASS=""
+$ OPERATION="ALL"
 $ IF  P1 .nes. ""
 $   THEN SYSPASS="''P1'"
 $ ELSE
@@ -26,6 +27,9 @@ $   THEN MIMER_USER="''P3'"
 $ ENDIF
 $ IF  P4 .nes. ""
 $   THEN MIMER_PASS="''P4'"
+$ ENDIF
+$ IF  P5 .nes. ""
+$   THEN OPERATION="''P5'"
 $ ENDIF
 $
 $! Check that Mimer SQL is installed and started
@@ -68,10 +72,13 @@ $ ELSE
 $   TMP = F$SEARCH("[.LOG]*.*;*")
 $   IF TMP .NES. "" THEN DELETE [.LOG]*.*;*
 $ ENDIF
-$! Create directory for generated files scripts or clear it if it exists
+$! Create directory for generated files if it doesn't exist
 $ IF F$PARSE("[.GEN_SQL]","","DIRECTORY") .EQS. ""
 $ THEN
 $   CRE/DIR [.GEN_SQL]
+$ ENDIF
+$ IF  OPERATION .EQS. "LOAD"
+$   THEN GOTO LOAD_DATA
 $ ENDIF
 $! Create schema
 $!
@@ -114,19 +121,37 @@ $ WRITE SYS$OUTPUT "Update statistics for SYSTEM"
 $ bsql/username=SYSADM/password="''SYSPASS'"/query="update statistics for ident SYSTEM"
 $ WRITE SYS$OUTPUT "Database schemas created"
 $ WRITE SYS$OUTPUT ""
-$ WRITE SYS$OUTPUT "Analyzing database, store results in [.GEN_SQL]''SCHEMA'_ANALYZE.SQL"
-$ define/user sys$output [.GEN_SQL]'SCHEMA'_analyze.SQL
-$ dbanalyzer/username="''MIMER_USER'"/password="''MIMER_PASS'"
-$ WRITE SYS$OUTPUT "Optimizing database, log results to [.LOG]''SCHEMA'_ANALYZE.LOG"
-$ OPEN/WRITE OUTFILE [.GEN_SQL]analyze_schema_'SCHEMA'.SQL
+$ WRITE SYS$OUTPUT "Analyzing database, store results in [.GEN_SQL]''SCHEMA'_ANALYZED.SQL"
+$ define/user sys$output [.GEN_SQL]'SCHEMA'_ANALYZED.SQL
+$ dbanalyzer/username="''MIMER_USER'"/password="''MIMER_PASS'"/schema="''SCHEMA'"
+$ WRITE SYS$OUTPUT "Optimizing database, log results to [.LOG]''SCHEMA'_ANALYZED.LOG"
+$ OPEN/WRITE OUTFILE [.GEN_SQL]ANALYZE_SCHEMA_'SCHEMA'.SQL
 $ WRITE OUTFILE "log input,output on '[.LOG]ANALYZE_SCHEMA_''SCHEMA'.LOG';"
 $ WRITE OUTFILE "WHENEVER ERROR CONTINUE;"
-$ WRITE OUTFILE "read '[.GEN_SQL]" + SCHEMA + "_ANALYZE.SQL';"
+$ WRITE OUTFILE "read '[.GEN_SQL]" + SCHEMA + "_ANALYZED.SQL';"
 $ WRITE OUTFILE "EXIT;"
 $ CLOSE OUTFILE
-$ define/user sys$output [.LOG]'SCHEMA'_analyze.LOG
+$ define/user sys$output [.LOG]'SCHEMA'_ANALYZE.LOG
 $ bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="read '[.GEN_SQL]ANALYZE_SCHEMA_''SCHEMA'.SQL'"
+$ TMP = F$SEARCH("[.EXTRA_SQL]''SCHEMA'-AFTER-CREATE.SQL")
+$ IF TMP .NES. ""
+$ THEN
+$     WRITE SYS$OUTPUT "Executing extra SQL after create schema in [.EXTRA_SQL]''SCHEMA'-AFTER-CREATE.SQL"
+$     WRITE SYS$OUTPUT "Log operations to [.LOG]''SCHEMA'-AFTER-CREATE-SQL.LOG"
+$     OPEN/WRITE OUTFILE [.GEN_SQL]'SCHEMA'-AFTER-CREATE-SQL.SQL
+$     WRITE OUTFILE "log input,output on '[.LOG]" + SCHEMA + "-AFTER-CREATE-SQL.LOG';"
+$     WRITE OUTFILE "set output off;"
+$     WRITE OUTFILE "set schema ''SCHEMA';"
+$     WRITE OUTFILE "read '[.EXTRA_SQL]" + "''SCHEMA'-AFTER-CREATE.SQL';"
+$     CLOSE OUTFILE
+$     define/user sys$output [.LOG]'SCHEMA'-AFTER-CREATE-OUTPUT.LOG
+$     bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="read '[.GEN_SQL]''SCHEMA'-AFTER-CREATE-SQL.SQL'"
+$ ENDIF
 $ WRITE SYS$OUTPUT ""
+$ IF  OPERATION .EQS. "CREATE"
+$   THEN GOTO EXIT_OK
+$ ENDIF
+$ LOAD_DATA:
 $ WRITE SYS$OUTPUT "Loading exported data into Mimer SQL"
 $ WRITE SYS$OUTPUT "Log files for the load operations can be found in [.LOG]"
 $! Load tables in correct order so we don't violate foreign key constraints
@@ -166,25 +191,25 @@ $   close table_file
 $
 $ WRITE SYS$OUTPUT ""
 
-$ TMP = F$SEARCH("[.EXTRA_SQL]''SCHEMA'.SQL")
+$ TMP = F$SEARCH("[.EXTRA_SQL]''SCHEMA'-AFTER-LOAD.SQL")
 $ IF TMP .NES. ""
 $ THEN
-$     WRITE SYS$OUTPUT "Executing extra SQL in [.EXTRA_SQL]''SCHEMA'.SQL"
-$     WRITE SYS$OUTPUT "Log operations to [.LOG]''SCHEMA'-EXTRA_SQL.LOG"
-$     OPEN/WRITE OUTFILE [.GEN_SQL]'SCHEMA'-EXTRA_SQL.SQL
-$     WRITE OUTFILE "log input,output on '[.LOG]" + SCHEMA + "-EXTRA_SQL.LOG';"
+$     WRITE SYS$OUTPUT "Executing extra SQL after load in [.EXTRA_SQL]''SCHEMA'-AFTER-LOAD.SQL"
+$     WRITE SYS$OUTPUT "Log operations to [.LOG]''SCHEMA'-AFTER-LOAD-SQL.LOG"
+$     OPEN/WRITE OUTFILE [.GEN_SQL]'SCHEMA'-AFTER-LOAD-SQL.SQL
+$     WRITE OUTFILE "log input,output on '[.LOG]" + SCHEMA + "-AFTER-LOAD-SQL.LOG';"
 $     WRITE OUTFILE "set output off;"
 $     WRITE OUTFILE "set schema ''SCHEMA';"
-$     WRITE OUTFILE "read '[.EXTRA_SQL]" + "''SCHEMA'.SQL';"
+$     WRITE OUTFILE "read '[.EXTRA_SQL]" + "''SCHEMA'-AFTER-LOAD.SQL';"
 $     CLOSE OUTFILE
-$     define/user sys$output [.LOG]'SCHEMA'-EXTRA_SQL_OUTPUT.LOG
-$     bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="read '[.GEN_SQL]''SCHEMA'-EXTRA_SQL.SQL'"
+$     define/user sys$output [.LOG]'SCHEMA'-AFTER-LOAD-OUTPUT.LOG
+$     bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="read '[.GEN_SQL]''SCHEMA'-AFTER-LOAD-SQL.SQL'"
 $ ENDIF
 $ WRITE SYS$OUTPUT "Updating statistics"
 $ bsql/username=SYSADM/password="''SYSPASS'"/query="update statistics for ident SYSTEM"
 $ bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="update statistics for schema ''SCHEMA'"
 $ WRITE SYS$OUTPUT "Finished loading data into Mimer SQL using the database user ''MIMER_USER' and database schema ''SCHEMA'"
-$ WRITE SYS$OUTPUT "The password for the Mimer SQL user ''MIMER_USER' can be changed with the SQL statement ""alter ident ''MIMER_USER' identified by '<new password>'"""
+$ EXIT_OK:
 $ EXIT
 $
 $! Checks that the Mimer SQL environment is correct

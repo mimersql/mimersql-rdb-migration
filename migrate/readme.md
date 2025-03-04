@@ -44,7 +44,7 @@ The last argument is used as the schema name in Mimer SQL and to prefix the diff
 When the unload is finished, the migration and loading of the schema and data into Mimer SQL is performed by running:
 
 ```dcl
-@load_mimer <SYSADM password> <schema> [<Mimer SQL user>]
+@load_mimer <SYSADM password> <schema> [<Mimer SQL user> <Mimer SQL password [operation]>]
 ```
 
 - `<SYSADM password>` can be an empty string, in which case you will be prompted for the password.
@@ -52,8 +52,16 @@ When the unload is finished, the migration and loading of the schema and data in
 - `<Mimer SQL user>` is a database user that will be created if it does not exist. If left out, a default user called "mimeruser" is used.
 
 For the specified Mimer SQL user, a schema will be created, and all database objects will be created within that schema. Multiple Rdb databases can be unloaded and loaded using the same Mimer SQL user but with different schema names. The schema corresponds to the name given by the “declare alias” statement used with the Rdb database.
-To handle objects that need to be manually migrated or to execute other custom SQL, the load_mimer.com script will look for a file `<schema>.sql` in the `[.extra_sql]`
-directory and execute it if found. This can be used, for example, to create triggers that could not be automatically converted to Mimer SQL.
+To handle objects that need to be manually migrated or to execute other custom SQL, the load_mimer.com script will look for a files in `[.extra_sql]`. This can be used, for example, to create triggers that could not be automatically converted to Mimer SQL. There are different files for different stages of the migration:
+
+- [.extra_sql]<schema>-SYSTEM-AFTER-CREATE.SQL
+  - Executed as SYSADM after the schema is created. This can be for example changing the size of a databank.
+- [.extra_sql]<schema>-AFTER-CREATE.SQL
+  - Executed as the specified specified user in the schema created. This can be manually changed index or other optimizations.
+- [.extra_sql]<schema>-AFTER-LOAD.SQL
+  - Executed as the specified user after data is loaded. An example of SQL to put here is manyally created triggers.
+If the files are found they are executed, otherwise excluded.
+
 
 The `load_mimer.com` script will perform the following steps:
 

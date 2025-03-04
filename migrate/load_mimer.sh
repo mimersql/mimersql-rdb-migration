@@ -203,7 +203,7 @@ bsql --username=SYSADM --password=${SYSADM_PASS} --query="update statistics for 
 echo "Database schemas created"
 echo ""
 echo "Analyzing database, store results in ./GEN_SQL/${SCHEMA}_ANALYZE.SQL"
-dbanalyzer --username=${MIMER_USER} --password=${MIMER_PASS} ${MIMER_DATABASE} > ./GEN_SQL/${SCHEMA}_ANALYZE.SQL
+dbanalyzer --username=${MIMER_USER} --password=${MIMER_PASS} --schema=${SCHEMA} ${MIMER_DATABASE} > ./GEN_SQL/${SCHEMA}_ANALYZE.SQL
 echo "Optimizing database, log results to ./LOG/${SCHEMA}_ANALYZE.LOG"
 echo "log input,output on './LOG/ANALYZE_SCHEMA_${SCHEMA}.LOG';" > ./GEN_SQL/ANALYZE_SCHEMA_${SCHEMA}.SQL
 echo "WHENEVER ERROR CONTINUE;" >> ./GEN_SQL/ANALYZE_SCHEMA_${SCHEMA}.SQL
