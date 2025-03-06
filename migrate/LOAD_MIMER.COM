@@ -80,6 +80,9 @@ $ ENDIF
 $ IF  OPERATION .EQS. "LOAD"
 $   THEN GOTO LOAD_DATA
 $ ENDIF
+$ IF  OPERATION .EQS. "CONTINUE_LOAD"
+$   THEN GOTO CONTINUE_LOAD
+$ ENDIF
 $! Create schema
 $!
 $! Translate the Rdb SQL dialect to Mimer SQL
@@ -147,13 +150,31 @@ $     CLOSE OUTFILE
 $     define/user sys$output [.LOG]'SCHEMA'-AFTER-CREATE-OUTPUT.LOG
 $     bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="read '[.GEN_SQL]''SCHEMA'-AFTER-CREATE-SQL.SQL'"
 $ ENDIF
+$ IF TMP .NES. ""
+$ THEN
+$     WRITE SYS$OUTPUT "Executing extra SQL as SYSADM user after create schema in [.EXTRA_SQL]''SCHEMA'-SYSTEM-AFTER-CREATE.SQL"
+$     WRITE SYS$OUTPUT "Log operations to [.LOG]''SCHEMA'-SYSTEM-AFTER-CREATE-SQL.LOG"
+$     OPEN/WRITE OUTFILE [.GEN_SQL]'SCHEMA'-SYSTEM-AFTER-CREATE-SQL.SQL
+$     WRITE OUTFILE "log input,output on '[.LOG]" + SCHEMA + "-SYSTEM-AFTER-CREATE-SQL.LOG';"
+$     WRITE OUTFILE "set output off;"
+$     WRITE OUTFILE "read '[.EXTRA_SQL]" + "''SCHEMA'-SYSTEM-AFTER-CREATE.SQL';"
+$     CLOSE OUTFILE
+$     define/user sys$output [.LOG]'SCHEMA'-SYSTEM-AFTER-CREATE-OUTPUT.LOG
+$     bsql/username=SYSADM/password="''SYSPASS'"/query="read '[.GEN_SQL]''SCHEMA'-SYSTEM-AFTER-CREATE-SQL.SQL'"
+$ ENDIF
 $ WRITE SYS$OUTPUT ""
 $ IF  OPERATION .EQS. "CREATE"
 $   THEN GOTO EXIT_OK
 $ ENDIF
-$ LOAD_DATA:
 $ WRITE SYS$OUTPUT "Loading exported data into Mimer SQL"
 $ WRITE SYS$OUTPUT "Log files for the load operations can be found in [.LOG]"
+$ LOAD_DATA:
+$   TMP = F$SEARCH("''TABLE_DEFS'")
+$   IF TMP .NES. ""
+$   THEN
+$       DELETE 'TABLE_DEFS';*
+$   ENDIF
+$ WRITE SYS$OUTPUT "Retreiving tables to load"
 $! Load tables in correct order so we don't violate foreign key constraints
 $ OPEN/WRITE OUTFILE [.GEN_SQL]GET_TABLES_'SCHEMA'.SQL
 $ WRITE OUTFILE "log output on '" + "''TABLE_DEFS'" + "';"
@@ -163,10 +184,13 @@ $ WRITE OUTFILE "and object_schema = '" + SCHEMA + "' order by coalesce(object_a
 $ CLOSE OUTFILE
 $ define/user sys$output [.LOG]get_tables_'SCHEMA'.LOG
 $ bsql/username=SYSADM/password="''SYSPASS'"/query="read '[.GEN_SQL]GET_TABLES_''SCHEMA'.SQL'"
+$ CONTINUE_LOAD:
 $!
 $ ! Open the file with tables
 $ open/read table_file 'TABLE_DEFS'
-$
+$! In case the file was left open in an earlier attempt, close it and open it again
+$ close table_file
+$ open/read table_file 'TABLE_DEFS'
 $ ! Loop over each line in the file
 $ loop:
 $   read/end_of_file=done table_file line

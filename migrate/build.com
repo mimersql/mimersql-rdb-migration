@@ -20,7 +20,8 @@ $! Define the list of files to process
 $ IF  P1 .nes. ""
 $   THEN PROG_LIST = "''P1',"
 $ ELSE
-$   PROG_LIST = "PPRCVA004,PPRCVA005,PPRCAR010,PPRCAR016,PPRCVA010,PPRCVA020,PPRCVA030"
+$   WRITE SYS$OUTPUT "Give a list programs without extension as parameter one, for example PROG1,PROG2,PROG2"
+$   EXIT 1
 $ ENDIF
 $! Set debug mode
 $ IF  P2 .eqs. "DEBUG"
@@ -47,7 +48,7 @@ $   WRITE SYS$OUTPUT "Converting ''PROG_FILE_SCO' to ''NEW_SRC_DIR'''PROG_FILE_E
 $   sqltranslator/rdb/cobol/nologo/format=terminaL 'PROG_FILE_SCO' 'NEW_SRC_DIR''PROG_FILE_ECO'
 $   esql/cobol/nologo/format=terminal 'NEW_SRC_DIR''PROG_FILE_ECO' 'BUILD_DIR''PROG_FILE_COB'
 $   cobol/'COBFLAG'noansi/include='CUR_DIR'/object='BUILD_DIR''PROG_FILE_OBJ' 'BUILD_DIR''PROG_FILE_COB'
-$   link/'LNKFLAG'EXECUTABLE='BUILD_DIR''PROG_FILE' 'BUILD_DIR''PROG_FILE_OBJ','CUR_DIR'rutdate,'CUR_DIR'mimer_get_err,mimer$lib:mimer$sql/opt
+$   link/'LNKFLAG'EXECUTABLE='BUILD_DIR''PROG_FILE' 'BUILD_DIR''PROG_FILE_OBJ',mimer$lib:mimer$sql/opt
 $   GOTO LOOP
 $ END_LOOP:
 $ WRITE SYS$OUTPUT ""
