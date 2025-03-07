@@ -6,6 +6,7 @@ MIMER_PASS="gB7Xd92jLmWZ"
 SYSADM_PASS=""
 ENCODING="latin1"
 OPERATION="ALL"
+DELETE="NO"
 usage()
 {
 cat << EOF
@@ -20,6 +21,7 @@ OPTIONS:
    -P      Password for Mimer SQL user, default is ${MIMER_PASS}
    -e      Encoding of the input files, default is latin1
    -o      Operation, can be CREATE, LOAD, or CONTINUE_LOAD. Default is to run all steps
+   -d      Delete all rows in tables to be loaded before doing the load
 EOF
 }
 
@@ -93,7 +95,7 @@ check_mimer()
 }
 
 
-while getopts ":p:s:u:P:e:o:" OPTION
+while getopts ":p:s:u:P:e:o:d" OPTION
 do
      case $OPTION in
          'p')
@@ -110,6 +112,9 @@ do
              ;;
          'P')
             MIMER_PASS=${OPTARG}
+             ;;
+          'd')
+            DELETE="YES"
              ;;
          'e')
             ENCODING=${OPTARG,,}
@@ -236,7 +241,7 @@ if [ "${OPERATION}" = "CREATE" -o "${OPERATION}" = "ALL" ]; then
         bsql --username=${MIMER_USER} --password=${MIMER_PASS} --query="read './GEN_SQL/${SCHEMA}-SYSTEM-AFTER-CREATE_SQL.SQL'" >> ./LOG/TMP_OUTPUT.LOG 2>&1
     fi
 fi # End of CREATE
-if [ "${OPERATION}" = "LOAD" -o "${OPERATION}" = "CONTINUE_LOAD" ]; then
+if [ "${OPERATION}" != "CREATE" ]; then
     echo "Loading exported data into Mimer SQL"
     echo "Log files for the load operations can be found in ./LOG/"
     if [ "${OPERATION}" = "LOAD" ]; then
@@ -257,7 +262,11 @@ if [ "${OPERATION}" = "LOAD" -o "${OPERATION}" = "CONTINUE_LOAD" ]; then
         tab=$(echo "$line" | sed 's/^[ \t]*//;s/[ \t]*$//')
         if [ "$tab" != "" ]; then
             if [ -e ./UNLOAD_DATA/${SCHEMA}-${tab}.TXT ]; then
-                echo "Loading $tab"
+                if [ "${DELETE}" = "YES" ]; then
+                    echo "Cleaning ${SCHEMA}.${tab}"
+                    bsql --username=${MIMER_USER} --password=${MIMER_PASS} --query="delete from ${SCHEMA}.${tab}" >> ./LOG/TMP_OUTPUT.LOG 2>&1
+                fi
+                echo "Loading ${SCHEMA}.${tab}"
                 LOAD_CMD="load from 'DELIM.DAT', './UNLOAD_DATA/${SCHEMA}-${tab}.TXT' as ${ENCODING} log './LOG/LOAD_${SCHEMA}-${tab}.LOG' insert into ${SCHEMA}.${tab}"
                 mimload --username=${MIMER_USER} --password=${MIMER_PASS} "${LOAD_CMD}" ${MIMER_DATABASE}
     #        else
@@ -282,6 +291,10 @@ if [ "${OPERATION}" = "LOAD" -o "${OPERATION}" = "CONTINUE_LOAD" ]; then
     bsql --username=${MIMER_USER} --password=${MIMER_PASS} --query="update statistics for schema ${SCHEMA}" ${MIMER_DATABASE}
     echo "Finished loading data into Mimer SQL using the database user ${MIMER_USER} and database schema ${SCHEMA}"
 fi # End of LOAD or CONTINUE_LOAD
-echo "The password for the Mimer SQL user ${MIMER_USER} can be changed with the SQL statement ""alter ident ${MIMER_USER} identified by '<new password>'"""
+echo ""
+if [ "${OPERATION}" = "CREATE" -o "${OPERATION}" = "ALL" ]; then
+    echo "The password for the Mimer SQL user ${MIMER_USER} can be changed with the SQL statement ""alter ident ${MIMER_USER} identified by '<new password>'"""
+    echo ""
+fi
 exit
 

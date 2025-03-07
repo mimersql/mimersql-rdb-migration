@@ -4,6 +4,7 @@ $ MIMER_USER = "mimeruser"
 $ MIMER_PASS = "gB7Xd92jLmWZ"
 $ SYSPASS=""
 $ OPERATION="ALL"
+$ CLEAN="NO"
 $ IF  P1 .nes. ""
 $   THEN SYSPASS="''P1'"
 $ ELSE
@@ -31,6 +32,9 @@ $ ENDIF
 $ IF  P5 .nes. ""
 $   THEN OPERATION="''P5'"
 $ ENDIF
+$ IF  P6 .eqs. "DELETE"
+$   THEN CLEAN="YES"
+$ ENDIF
 $
 $! Check that Mimer SQL is installed and started
 $ CALL CHECK_MIMER
@@ -50,11 +54,6 @@ $   WRITE SYS$OUTPUT "unload was done on a different system, you must first tran
 $   WRITE SYS$OUTPUT "with all content to the system with Mimer SQL, before attempting a load."
 $   EXIT 4
 $ ELSE
-$   TMP = F$SEARCH("''TABLE_DEFS'")
-$   IF TMP .NES. ""
-$   THEN
-$       DELETE 'TABLE_DEFS';*
-$   ENDIF
 $   TMP = F$SEARCH("[.UNLOAD_DATA]''SCHEMA'-SCHEMA-RDB.SQL")
 $   IF TMP .EQS. ""
 $   THEN
@@ -200,7 +199,13 @@ $   THEN
 $       TMP = F$SEARCH("[.UNLOAD_DATA]''SCHEMA'-''tab'.TXT")
 $       IF TMP .NES. ""
 $       THEN
-$           write sys$output "Loading ''tab'"
+$           IF CLEAN .EQS. "YES"
+$           THEN
+$               write sys$output "Cleaning tab ''SCHEMA'.''tab'"
+$               define/user sys$output [.LOG]TMP_OUTPUT.LOG
+$               bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="delete from ''SCHEMA'.''tab'"
+$           ENDIF
+$           write sys$output "Loading ''SCHEMA'.''tab'"
 $           LOAD_CMD = """" + "load from 'DELIM.DAT', '[.UNLOAD_DATA]" + SCHEMA + "-" + tab + ".TXT' as LATIN1 log '[.LOG]LOAD_" + SCHEMA + "-" + tab + ".LOG' insert into " + SCHEMA + "." + tab + """"
 $           mimload/user="''MIMER_USER'"/password="''MIMER_PASS'" 'LOAD_CMD'
 $!       ELSE
