@@ -63,6 +63,12 @@ $   ENDIF
 $ ENDIF
 $ WRITE SYS$OUTPUT "Check done"
 $
+$ IF  OPERATION .EQS. "LOAD"
+$   THEN GOTO LOAD_DATA
+$ ENDIF
+$ IF  OPERATION .EQS. "CONTINUE_LOAD"
+$   THEN GOTO CONTINUE_LOAD
+$ ENDIF
 $! Create directory for log files or clear it if it exists
 $ IF F$PARSE("[.LOG]","","DIRECTORY") .EQS. ""
 $ THEN
@@ -75,12 +81,6 @@ $! Create directory for generated files if it doesn't exist
 $ IF F$PARSE("[.GEN_SQL]","","DIRECTORY") .EQS. ""
 $ THEN
 $   CRE/DIR [.GEN_SQL]
-$ ENDIF
-$ IF  OPERATION .EQS. "LOAD"
-$   THEN GOTO LOAD_DATA
-$ ENDIF
-$ IF  OPERATION .EQS. "CONTINUE_LOAD"
-$   THEN GOTO CONTINUE_LOAD
 $ ENDIF
 $! Create schema
 $!
