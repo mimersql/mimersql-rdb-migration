@@ -164,7 +164,9 @@ echo "Check done"
 if [ ! -d ./LOG ]; then
   mkdir ./LOG
 else
-  rm -f ./LOG/*
+  if [ "${OPERATION}" = "CREATE" -o "${OPERATION}" = "ALL" ]; then
+    rm -f ./LOG/*
+  fi
 fi
 # Create directory for generated files scripts or clear it if it exists
 if [ ! -d ./GEN_SQL ]; then
@@ -211,12 +213,12 @@ if [ "${OPERATION}" = "CREATE" -o "${OPERATION}" = "ALL" ]; then
     bsql --username=SYSADM --password=${SYSADM_PASS} --query="update statistics for ident SYSTEM"
     echo "Database schemas created"
     echo ""
-    echo "Analyzing database, store results in ./GEN_SQL/${SCHEMA}_ANALYZE.SQL"
-    dbanalyzer --username=${MIMER_USER} --password=${MIMER_PASS} --schema=${SCHEMA} ${MIMER_DATABASE} > ./GEN_SQL/${SCHEMA}_ANALYZE.SQL
-    echo "Optimizing database, log results to ./LOG/${SCHEMA}_ANALYZE.LOG"
-    echo "log input,output on './LOG/ANALYZE_SCHEMA_${SCHEMA}.LOG';" > ./GEN_SQL/ANALYZE_SCHEMA_${SCHEMA}.SQL
+    echo "Analyzing database, store results in ./GEN_SQL/${SCHEMA}_ANALYZED.SQL"
+    dbanalyzer --username=${MIMER_USER} --password=${MIMER_PASS} --schema=${SCHEMA} ${MIMER_DATABASE} > ./GEN_SQL/${SCHEMA}_ANALYZED.SQL
+    echo "Optimizing database, log results to ./LOG/${SCHEMA}_ANALYZED.LOG"
+    echo "log input,output on './LOG/${SCHEMA}_ANALYZED.LOG';" > ./GEN_SQL/ANALYZE_SCHEMA_${SCHEMA}.SQL
     echo "WHENEVER ERROR CONTINUE;" >> ./GEN_SQL/ANALYZE_SCHEMA_${SCHEMA}.SQL
-    echo "read './GEN_SQL/${SCHEMA}_ANALYZE.SQL';" >> ./GEN_SQL/ANALYZE_SCHEMA_${SCHEMA}.SQL
+    echo "read './GEN_SQL/${SCHEMA}_ANALYZED.SQL';" >> ./GEN_SQL/ANALYZE_SCHEMA_${SCHEMA}.SQL
     echo "EXIT;" >> ./GEN_SQL/ANALYZE_SCHEMA_${SCHEMA}.SQL
     bsql --username=${MIMER_USER} --password=${MIMER_PASS} --query="read './GEN_SQL/ANALYZE_SCHEMA_${SCHEMA}.SQL'" ${MIMER_DATABASE} >> ./LOG/TMP_OUTPUT.LOG 2>&1
     echo ""
