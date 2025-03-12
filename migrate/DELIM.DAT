@@ -1,4 +1,5 @@
 #data
 column separator '|'
+text qualifier ''
 null indicator '\-'
 ;
