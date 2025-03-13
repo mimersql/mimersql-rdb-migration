@@ -224,23 +224,23 @@ if [ "${OPERATION}" = "CREATE" -o "${OPERATION}" = "ALL" ]; then
     echo ""
     if [ -e ./EXTRA_SQL/${SCHEMA}-AFTER-CREATE.SQL ]; then
         echo "Executing extra SQL after create schema in ./EXTRA_SQL/${SCHEMA}-AFTER-CREATE.SQL"
-        echo "Log operations to ./LOG/${SCHEMA}-AFTER-CREATE_SQL.LOG"
-        echo "log input,output on './LOG/${SCHEMA}-AFTER-CREATE_SQL.LOG';" > ./GEN_SQL/${SCHEMA}-AFTER-CREATE_SQL.SQL
-        echo "set output off;" >> ./GEN_SQL/${SCHEMA}-AFTER-CREATE_SQL.SQL
-        echo "set schema ${SCHEMA};" >> ./GEN_SQL/${SCHEMA}-AFTER-CREATE_SQL.SQL
-        echo "read './EXTRA_SQL/${SCHEMA}.SQL';" >> ./GEN_SQL/${SCHEMA}-AFTER-CREATE_SQL.SQL
-        echo "EXIT;" >> ./GEN_SQL/${SCHEMA}-AFTER-CREATE_SQL.SQL
-        bsql --username=${MIMER_USER} --password=${MIMER_PASS} --query="read './GEN_SQL/${SCHEMA}-AFTER-CREATE_SQL.SQL'" >> ./LOG/TMP_OUTPUT.LOG 2>&1
+        echo "Log operations to ./LOG/${SCHEMA}-AFTER-CREATE-SQL.LOG"
+        echo "log input,output on './LOG/${SCHEMA}-AFTER-CREATE-SQL.LOG';" > ./GEN_SQL/${SCHEMA}-AFTER-CREATE-SQL.SQL
+        echo "set output off;" >> ./GEN_SQL/${SCHEMA}-AFTER-CREATE-SQL.SQL >> ./GEN_SQL/${SCHEMA}-AFTER-CREATE-SQL.SQL
+        echo "set schema ${SCHEMA};" >> ./GEN_SQL/${SCHEMA}-AFTER-CREATE-SQL.SQL >> ./GEN_SQL/${SCHEMA}-AFTER-CREATE-SQL.SQL
+        echo "read './EXTRA_SQL/${SCHEMA}-AFTER-CREATE.SQL';" >> ./GEN_SQL/${SCHEMA}-AFTER-CREATE-SQL.SQL
+        echo "EXIT;" >> ./GEN_SQL/${SCHEMA}-AFTER-CREATE-SQL.SQL
+        bsql --username=${MIMER_USER} --password=${MIMER_PASS} --query="read './GEN_SQL/${SCHEMA}-AFTER-CREATE-SQL.SQL'" >> ./LOG/TMP_OUTPUT.LOG 2>&1
     fi
     if [ -e ./EXTRA_SQL/${SCHEMA}-SYSTEM-AFTER-CREATE.SQL ]; then
-        echo "Executing extra SQL as SYSADM user after create schem in ./EXTRA_SQL/${SCHEMA}-SYSTEM-AFTER-CREATE.SQL"
-        echo "Log operations to ./LOG/${SCHEMA}-SYSTEM-AFTER-CREATE_SQL.LOG"
-        echo "log input,output on './LOG/${SCHEMA}-SYSTEM-AFTER-CREATE_SQL.LOG';" > ./GEN_SQL/${SCHEMA}-SYSTEM-AFTER-CREATE_SQL.SQL
-        echo "set output off;" >> ./GEN_SQL/${SCHEMA}-SYSTEM-AFTER-CREATE_SQL.SQL
-        echo "set schema ${SCHEMA};" >> ./GEN_SQL/${SCHEMA}-SYSTEM-AFTER-CREATE_SQL.SQL
-        echo "read './EXTRA_SQL/${SCHEMA}.SQL';" >> ./GEN_SQL/${SCHEMA}-SYSTEM-AFTER-CREATE_SQL.SQL
-        echo "EXIT;" >> ./GEN_SQL/${SCHEMA}-SYSTEM-AFTER-CREATE_SQL.SQL
-        bsql --username=${MIMER_USER} --password=${MIMER_PASS} --query="read './GEN_SQL/${SCHEMA}-SYSTEM-AFTER-CREATE_SQL.SQL'" >> ./LOG/TMP_OUTPUT.LOG 2>&1
+        echo "Executing extra SQL as SYSADM user after create scheme in ./EXTRA_SQL/${SCHEMA}-SYSTEM-AFTER-CREATE.SQL"
+        echo "Log operations to ./LOG/${SCHEMA}-SYSTEM-AFTER-CREATE-SQL.LOG"
+        echo "log input,output on './LOG/${SCHEMA}-SYSTEM-AFTER-CREATE-SQL.LOG';" > ./GEN_SQL/${SCHEMA}-SYSTEM-AFTER-CREATE-SQL.SQL
+        echo "set output off;" >> ./GEN_SQL/${SCHEMA}-SYSTEM-AFTER-CREATE-SQL.SQL >> ./GEN_SQL/${SCHEMA}-SYSTEM-AFTER-CREATE-SQL.SQL
+        echo "set schema ${SCHEMA};" >> ./GEN_SQL/${SCHEMA}-SYSTEM-AFTER-CREATE-SQL.SQL >> ./GEN_SQL/${SCHEMA}-SYSTEM-AFTER-CREATE-SQL.SQL
+        echo "read './EXTRA_SQL/${SCHEMA}-SYSTEM-AFTER-CREATE.SQL';" >> ./GEN_SQL/${SCHEMA}-SYSTEM-AFTER-CREATE-SQL.SQL
+        echo "EXIT;" >> ./GEN_SQL/${SCHEMA}-SYSTEM-AFTER-CREATE-SQL.SQL
+        bsql --username=SYSADM --password=${SYSADM_PASS} --query="read './GEN_SQL/${SCHEMA}-SYSTEM-AFTER-CREATE-SQL.SQL'" >> ./LOG/TMP_OUTPUT.LOG 2>&1
     fi
 fi # End of CREATE
 if [ "${OPERATION}" != "CREATE" ]; then
