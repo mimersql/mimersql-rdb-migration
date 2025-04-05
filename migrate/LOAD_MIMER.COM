@@ -188,7 +188,21 @@ $ CLOSE OUTFILE
 $ define/user sys$output [.LOG]get_tables_'SCHEMA'.LOG
 $ bsql/username=SYSADM/password="''SYSPASS'"/query="read '[.GEN_SQL]GET_TABLES_''SCHEMA'.SQL'"
 $ CONTINUE_LOAD:
-$!
+$! Run any extra SQL before loading data
+$ TMP = F$SEARCH("[.EXTRA_SQL]''SCHEMA'-BEFORE-LOAD.SQL")
+$ IF TMP .NES. ""
+$ THEN
+$     WRITE SYS$OUTPUT "Executing extra SQL before load in [.EXTRA_SQL]''SCHEMA'-AFTER-LOAD.SQL"
+$     WRITE SYS$OUTPUT "Log operations to [.LOG]''SCHEMA'-BEFORE-LOAD-SQL.LOG"
+$     OPEN/WRITE OUTFILE [.GEN_SQL]'SCHEMA'-BEFORE-LOAD-SQL.SQL
+$     WRITE OUTFILE "log input,output on '[.LOG]" + SCHEMA + "-BEFORE-LOAD-SQL.LOG';"
+$     WRITE OUTFILE "set output off;"
+$     WRITE OUTFILE "set schema ''SCHEMA';"
+$     WRITE OUTFILE "read '[.EXTRA_SQL]" + "''SCHEMA'-BEFORE-LOAD.SQL';"
+$     CLOSE OUTFILE
+$     define/user sys$output [.LOG]'SCHEMA'-BEFORE-LOAD-OUTPUT.LOG
+$     bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="read '[.GEN_SQL]''SCHEMA'-BEFORE-LOAD-SQL.SQL'"
+$ ENDIF
 $ ! Open the file with tables
 $ open/read table_file 'TABLE_DEFS'
 $! In case the file was left open in an earlier attempt, close it and open it again
