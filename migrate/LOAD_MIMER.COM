@@ -74,14 +74,17 @@ $ IF F$PARSE("[.LOG]","","DIRECTORY") .EQS. ""
 $ THEN
 $   CRE/DIR [.LOG]
 $ ELSE
-$   TMP = F$SEARCH("[.LOG]*.*;*")
-$   IF TMP .NES. "" THEN DELETE [.LOG]*.*;*
+$   TMP = F$SEARCH("[.LOG]''SCHEMA'*.*;*")
+$   IF TMP .NES. "" THEN DELETE [.LOG]'SCHEMA'*.*;*
 $ ENDIF
 $! Create directory for generated files if it doesn't exist
 $ IF F$PARSE("[.GEN_SQL]","","DIRECTORY") .EQS. ""
 $ THEN
 $   CRE/DIR [.GEN_SQL]
 $ ENDIF
+$! Add Mimer SQL version information to main log file
+$ define/user sys$output [.LOG]'SCHEMA'_MIMINFO.LOG
+$ MIMINFO/VERSION
 $! Create schema
 $!
 $! Translate the Rdb SQL dialect to Mimer SQL
@@ -102,7 +105,7 @@ $ WRITE OUTFILE "grant table on ''SCHEMA'_DB to ''MIMER_USER';"
 $ WRITE OUTFILE "grant sequence on ''SCHEMA'_DB to ''MIMER_USER';"
 $ WRITE OUTFILE "EXIT;"
 $ CLOSE OUTFILE
-$ define/user sys$output [.LOG]TMP_OUTPUT.LOG
+$ define/user sys$output [.LOG]'SCHEMA'_OUTPUT.LOG
 $ bsql/username=SYSADM/password="''SYSPASS'"/query="read '[.GEN_SQL]CREATE_USERS_''SCHEMA'.SQL'"
 $ WRITE SYS$OUTPUT "Creating ''SCHEMA' schema, log result to [.LOG]CREATE_SCHEMA_''SCHEMA'.LOG"
 $ OPEN/WRITE OUTFILE [.GEN_SQL]create_schema_'SCHEMA'.SQL
@@ -116,7 +119,7 @@ $ WRITE OUTFILE "WHENEVER ERROR CONTINUE;"
 $ WRITE OUTFILE "read '[.GEN_SQL]" + SCHEMA + "-SCHEMA-MIMER.SQL';"
 $ WRITE OUTFILE "EXIT;"
 $ CLOSE OUTFILE
-$ define/user sys$output [.LOG]TMP_OUTPUT.LOG
+$ define/user sys$output [.LOG]'SCHEMA'_OUTPUT.LOG
 $ bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="read '[.GEN_SQL]CREATE_SCHEMA_''SCHEMA'.SQL'"
 $ !Update statistics for SYSTEM
 $ WRITE SYS$OUTPUT "Update statistics for SYSTEM"
@@ -149,6 +152,7 @@ $     CLOSE OUTFILE
 $     define/user sys$output [.LOG]'SCHEMA'-AFTER-CREATE-OUTPUT.LOG
 $     bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="read '[.GEN_SQL]''SCHEMA'-AFTER-CREATE-SQL.SQL'"
 $ ENDIF
+$ TMP = F$SEARCH("[.EXTRA_SQL]''SCHEMA'-SYSTEM-AFTER-CREATE.SQL")
 $ IF TMP .NES. ""
 $ THEN
 $     WRITE SYS$OUTPUT "Executing extra SQL as SYSADM user after create schema in [.EXTRA_SQL]''SCHEMA'-SYSTEM-AFTER-CREATE.SQL"
@@ -202,7 +206,7 @@ $       THEN
 $           IF CLEAN .EQS. "YES"
 $           THEN
 $               write sys$output "Cleaning tab ''SCHEMA'.''tab'"
-$               define/user sys$output [.LOG]TMP_OUTPUT.LOG
+$               define/user sys$output [.LOG]'SCHEMA'_OUTPUT.LOG
 $               bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="delete from ''SCHEMA'.''tab'"
 $           ENDIF
 $           write sys$output "Loading ''SCHEMA'.''tab'"
@@ -248,7 +252,8 @@ $ THEN
 $   WRITE SYS$OUTPUT "MIMER_DATABASE not defined"
 $   GOTO EXIT_ERR
 $ ENDIF
-$ WRITE SYS$OUTPUT "Using Mimer SQL database ''F$TRNLNM("MIMER_DATABASE")'"
+$ WRITE SYS$OUTPUT "Using Mimer SQL database ''F$TRNLNM("MIMER_DATABASE")'. Mimer SQL version information:"
+$ MIMINFO/VERSION
 $ MIMCONTROL/STATUS/DCL
 $ IF F$ELEMENT(0,",",MIMER_STATUS) .NES. "Running"
 $ THEN
