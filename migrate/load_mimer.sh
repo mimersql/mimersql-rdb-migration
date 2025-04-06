@@ -172,7 +172,9 @@ fi
 if [ ! -d ./GEN_SQL ]; then
   mkdir ./GEN_SQL
 else
-  rm -f ./GEN_SQL/*
+  if [ "${OPERATION}" = "CREATE" -o "${OPERATION}" = "ALL" ]; then
+    rm -f ./GEN_SQL/*
+  fi
 fi
 
 if [ "${OPERATION}" = "CREATE" -o "${OPERATION}" = "ALL" ]; then
@@ -246,6 +248,16 @@ fi # End of CREATE
 if [ "${OPERATION}" != "CREATE" ]; then
     echo "Loading exported data into Mimer SQL"
     echo "Log files for the load operations can be found in ./LOG/"
+    if [ -e ./EXTRA_SQL/${SCHEMA}-BEFORE-LOAD.SQL ]; then
+        echo "Executing extra SQL before load of data in ./EXTRA_SQL/${SCHEMA}-BEFORE-LOAD.SQL"
+        echo "Log operations to ./LOG/${SCHEMA}-BEFORE-LOAD_SQL.LOG"
+        echo "log input,output on './LOG/${SCHEMA}-BEFORE-LOAD_SQL.LOG';" > ./GEN_SQL/${SCHEMA}-BEFORE-LOAD_SQL.SQL
+        echo "set output off;" >> ./GEN_SQL/${SCHEMA}-BEFORE-LOAD_SQL.SQL
+        echo "set schema ${SCHEMA};" >> ./GEN_SQL/${SCHEMA}-BEFORE-LOAD_SQL.SQL
+        echo "read './EXTRA_SQL/${SCHEMA}-BEFORE-LOAD.SQL';" >> ./GEN_SQL/${SCHEMA}-BEFORE-LOAD_SQL.SQL
+        echo "EXIT;" >> ./GEN_SQL/${SCHEMA}-BEFORE-LOAD_SQL.SQL
+        bsql --username=${MIMER_USER} --password=${MIMER_PASS} --query="read './GEN_SQL/${SCHEMA}-BEFORE-LOAD_SQL.SQL'" >> ./LOG/TMP_OUTPUT.LOG 2>&1
+    fi
     if [ "${OPERATION}" = "LOAD" ]; then
         echo "Retreiving tables to load"
         # Load tables in correct order so we don't violate foreign key constraints
@@ -279,12 +291,12 @@ if [ "${OPERATION}" != "CREATE" ]; then
     echo "Finished loading data"
     echo ""
     if [ -e ./EXTRA_SQL/${SCHEMA}-AFTER-LOAD.SQL ]; then
-        echo "Executing extra SQL in ./EXTRA_SQL/${SCHEMA}-AFTER-LOAD.SQL"
+        echo "Executing extra SQL after load of data in ./EXTRA_SQL/${SCHEMA}-AFTER-LOAD.SQL"
         echo "Log operations to ./LOG/${SCHEMA}-AFTER-LOAD_SQL.LOG"
         echo "log input,output on './LOG/${SCHEMA}-AFTER-LOAD_SQL.LOG';" > ./GEN_SQL/${SCHEMA}-AFTER-LOAD_SQL.SQL
         echo "set output off;" >> ./GEN_SQL/${SCHEMA}-AFTER-LOAD_SQL.SQL
         echo "set schema ${SCHEMA};" >> ./GEN_SQL/${SCHEMA}-AFTER-LOAD_SQL.SQL
-        echo "read './EXTRA_SQL/${SCHEMA}.SQL';" >> ./GEN_SQL/${SCHEMA}-AFTER-LOAD_SQL.SQL
+        echo "read './EXTRA_SQL/${SCHEMA}-AFTER-LOAD.SQL';" >> ./GEN_SQL/${SCHEMA}-AFTER-LOAD_SQL.SQL
         echo "EXIT;" >> ./GEN_SQL/${SCHEMA}-AFTER-LOAD_SQL.SQL
         bsql --username=${MIMER_USER} --password=${MIMER_PASS} --query="read './GEN_SQL/${SCHEMA}-AFTER-LOAD_SQL.SQL'" >> ./LOG/TMP_OUTPUT.LOG 2>&1
     fi
