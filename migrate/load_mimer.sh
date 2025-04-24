@@ -7,6 +7,7 @@ SYSADM_PASS=""
 ENCODING="latin1"
 OPERATION="ALL"
 DELETE="NO"
+SHOW_TIMING="NO"
 usage()
 {
 cat << EOF
@@ -22,7 +23,32 @@ OPTIONS:
    -e      Encoding of the input files, default is latin1
    -o      Operation, can be CREATE, LOAD, or CONTINUE_LOAD. Default is to run all steps
    -d      Delete all rows in tables to be loaded before doing the load
+   -t      Table to load (default all tables)
+   -T      Show timing of the load operations
 EOF
+}
+
+load_table(){
+    tab=${1}
+    if [ -e ./UNLOAD_DATA/${SCHEMA}-${tab}.TXT ]; then
+        if [ "${DELETE}" = "YES" ]; then
+            echo "Cleaning ${SCHEMA}.${tab}"
+            bsql --username=${MIMER_USER} --password=${MIMER_PASS} --query="delete from ${SCHEMA}.${tab}" >> ./LOG/TMP_OUTPUT.LOG 2>&1
+        fi
+        if [ "${SHOW_TIMING}" = "YES" ]; then
+            start=$(date +%s)
+        fi
+        echo "Loading ${SCHEMA}.${tab}"
+        LOAD_CMD="load from 'DELIM.DAT', './UNLOAD_DATA/${SCHEMA}-${tab}.TXT' as ${ENCODING} log './LOG/LOAD_${SCHEMA}-${tab}.LOG' with bulk load insert into ${SCHEMA}.${tab}"
+        mimload --username=${MIMER_USER} --password=${MIMER_PASS} "${LOAD_CMD}" ${MIMER_DATABASE}
+        if [ "${SHOW_TIMING}" = "YES" ]; then
+            end=$(date +%s)
+            elapsed=$(echo "$end - $start" | bc)
+            printf '%s.%s loaded in %02d:%02d:%02d\n' ${SCHEMA} ${tab} $((elapsed/3600)) $((elapsed%3600/60)) $((elapsed%60))
+        fi
+    else
+        echo "Skipping ${SCHEMA}.${tab}, no data file found"
+    fi
 }
 
 fix_vms_names()
@@ -95,7 +121,7 @@ check_mimer()
 }
 
 
-while getopts ":p:s:u:P:e:o:d" OPTION
+while getopts ":p:s:u:P:e:o:t:d:T" OPTION
 do
      case $OPTION in
          'p')
@@ -118,7 +144,13 @@ do
              ;;
          'e')
             ENCODING=${OPTARG,,}
-             ;;             
+             ;;
+         't')
+            TABLE=${OPTARG}
+             ;;
+          'T')
+            SHOW_TIMING="YES"
+             ;;      
           ?)
              usage
              exit 0
@@ -271,23 +303,20 @@ if [ "${OPERATION}" != "CREATE" ]; then
         bsql --username=SYSADM --password=${SYSADM_PASS} --query="read './GEN_SQL/GET_TABLES_${SCHEMA}.SQL'" ${MIMER_DATABASE} >> ./LOG/TMP_OUTPUT.LOG 2>&1
     fi # End of LOAD
 
-    #Open the file with tables
-    while IFS= read -r line; do
-        tab=$(echo "$line" | sed 's/^[ \t]*//;s/[ \t]*$//')
-        if [ "$tab" != "" ]; then
-            if [ -e ./UNLOAD_DATA/${SCHEMA}-${tab}.TXT ]; then
-                if [ "${DELETE}" = "YES" ]; then
-                    echo "Cleaning ${SCHEMA}.${tab}"
-                    bsql --username=${MIMER_USER} --password=${MIMER_PASS} --query="delete from ${SCHEMA}.${tab}" >> ./LOG/TMP_OUTPUT.LOG 2>&1
-                fi
-                echo "Loading ${SCHEMA}.${tab}"
-                LOAD_CMD="load from 'DELIM.DAT', './UNLOAD_DATA/${SCHEMA}-${tab}.TXT' as ${ENCODING} log './LOG/LOAD_${SCHEMA}-${tab}.LOG' insert into ${SCHEMA}.${tab}"
-                mimload --username=${MIMER_USER} --password=${MIMER_PASS} "${LOAD_CMD}" ${MIMER_DATABASE}
-    #        else
-    #            echo "Skipping $tab, no data file found"
+    if [ "${SHOW_TIMING}" = "YES" ]; then
+        total_start=$(date +%s)
+    fi    
+    if [ "${TABLE}" != "" ]; then
+        load_table ${TABLE}
+    else
+        #Open the file with tables
+        while IFS= read -r line; do
+            tab=$(echo "$line" | sed 's/^[ \t]*//;s/[ \t]*$//')
+            if [ "$tab" != "" ]; then
+                load_table ${tab}
             fi
-        fi
-    done < ${TABLE_DEFS}
+        done < ${TABLE_DEFS}
+    fi
     echo "Finished loading data"
     echo ""
     if [ -e ./EXTRA_SQL/${SCHEMA}-AFTER-LOAD.SQL ]; then
@@ -299,6 +328,11 @@ if [ "${OPERATION}" != "CREATE" ]; then
         echo "read './EXTRA_SQL/${SCHEMA}-AFTER-LOAD.SQL';" >> ./GEN_SQL/${SCHEMA}-AFTER-LOAD_SQL.SQL
         echo "EXIT;" >> ./GEN_SQL/${SCHEMA}-AFTER-LOAD_SQL.SQL
         bsql --username=${MIMER_USER} --password=${MIMER_PASS} --query="read './GEN_SQL/${SCHEMA}-AFTER-LOAD_SQL.SQL'" >> ./LOG/TMP_OUTPUT.LOG 2>&1
+    fi
+    if [ "${SHOW_TIMING}" = "YES" ]; then
+        end=$(date +%s)
+        elapsed=$(echo "$end - $start" | bc)
+        printf 'All tables loaded in %02d:%02d:%02d\n' $((elapsed/3600)) $((elapsed%3600/60)) $((elapsed%60))
     fi
     echo "Updating statistics"
     bsql --username=SYSADM --password=${SYSADM_PASS} --query="update statistics for ident SYSTEM" ${MIMER_DATABASE}
