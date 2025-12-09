@@ -44,7 +44,7 @@ The last argument is used as the schema name in Mimer SQL and to prefix the diff
 When the unload is finished, the migration and loading of the schema and data into Mimer SQL is performed by running:
 
 ```dcl
-@load_mimer <SYSADM password> <schema> [<Mimer SQL user> <Mimer SQL> password] [operation]
+@load_mimer <SYSADM password> <schema> [<Mimer SQL user> <Mimer SQL password] [operation] [delete] [databank file]
 ```
 
 - `<SYSADM password>` can be an empty string, in which case you will be prompted for the password.
@@ -52,16 +52,18 @@ When the unload is finished, the migration and loading of the schema and data in
 - `<Mimer SQL user>` is a database user that will be created if it does not exist. If left out, a default user called "mimeruser" is used.
 - `<Mimer SQL password>` is the password for `<Mimer SQL user>`
 - `operation`: If specified only do part of the migration and valid values are ALL, CREATE, LOAD, and CONTINUE_LOAD
+- `delete` can be specified to delete all rows in the tables before loading. Can be used together with continue_load.
+- `databank file`is used to specify what the main databank file will be for the schema. If not specified, SCHEMA_NAME.DBF in the database home directory is used.
 
 For the specified Mimer SQL user, a schema will be created, and all database objects will be created within that schema. Multiple Rdb databases can be unloaded and loaded using the same Mimer SQL user but with different schema names. The schema corresponds to the name given by the “declare alias” statement used with the Rdb database.
-To handle objects that need to be manually migrated or to execute other custom SQL, the load_mimer.com script will look for a files in `[.extra_sql]`. This can be used, for example, to create triggers that could not be automatically converted to Mimer SQL. There are different files for different stages of the migration:
+To handle objects that need to be manually migrated or to execute other custom SQL, the load_mimer.com script will look for sql files in `[.extra_sql]`. This can be used, for example, to create triggers that could not be automatically converted to Mimer SQL. There are different files for different stages of the migration:
 
 - [.extra_sql]<schema>-SYSTEM-AFTER-CREATE.SQL
   - Executed as SYSADM after the schema is created. This can be for example changing the size of a databank.
 - [.extra_sql]<schema>-AFTER-CREATE.SQL
-  - Executed as the specified specified user in the schema created. This can be manually changed index or other optimizations.
+  - Executed as the specified user in the schema created. This can be manually changed index or other optimizations.
 - [.extra_sql]<schema>-AFTER-LOAD.SQL
-  - Executed as the specified user after data is loaded. An example of SQL to put here is manyally created triggers.
+  - Executed as the specified user after data is loaded. An example of SQL to put here is manually created triggers.
 If the files are found they are executed, otherwise ignored.
 
 
@@ -73,9 +75,10 @@ The `load_mimer.com` script will perform the following steps when running in def
 4. Create the Mimer SQL schema for the migrated Rdb database.
 5. Execute the translated SQL schema file using Mimer SQL.
 6. Run `dbanalyzer` and apply the suggested changes on the created schema to optimize the database structure.
-7. Load each table that contains data.
-8. If the file `[.extra_sql]<schema>.sql` exists, execute it to run custom SQL, such as manually converted triggers.
-9. Update database statistics for the Mimer SQL database to ensure efficient query execution.
+7. If [.extra_sql]< schema >-system-after-create.sql or [.extra_sql]< schema>-after-create.sql exists, execute them to run custom SQL, such as changing table or databank definitions.
+8. Load each table that contains data.
+9. If [.extra_sql]<schema >-after-load.sql exists, execute it to run custom SQL, such as creating manually converted triggers.
+10. Update database statistics for the Mimer SQL database to ensure efficient query execution.
 
 The entire migration can be performed on a single machine that has both Mimer SQL and Rdb installed, or it can be done on separate machines. If using separate machines, run `unload_rdb.com` on the machine with Rdb, transfer the entire directory to the machine with Mimer SQL installed, and then run `load_mimer.com`.
 
@@ -85,6 +88,8 @@ Using the `operation` parameter with `load_mimer.com`it is possible to divide th
 - `LOAD`: Only load data into an already created schema
 - `CONTINUE_LOAD`: Continue the load after an aborted load operation.
 
+It is also possible to pass `DELETE` as an extra 6:th argument when running `CONTINUE_LOAD`. This will delete all rows in the tables that are being reloaded.
+
 When running `@load_mimer "" <SCHEMA> <USER> <PASSWORD> LOAD` the scripts look in the database to see what tables to load data into and in what order. The tables to load are stored in [.UNLOAD_DATA]<schema>-TABLES-MIMER.TXT. If the load is aborted before all tables have been loaded it is possible to check the log files for each table loaded in the [.log] directory to see what tables have been succesfully load. The log files are named LOAD<schema>-<tablename>.LOG. To continue the load, remove the tables that have been successfully loaded from [.UNLOAD_DATA]<schema>-TABLES-MIMER.TXT, and then run the load again, but now with `CONTINUE_LOAD` instead of `LOAD`.
-To avoid duplicate errors and speed up the load, pass `-d` to delete all rows in tables that have been partially loaded, or delete them manually.
+To avoid duplicate errors and speed up the load, pass `DELETE` as the 6:th argument to delete all rows in tables that have been partially loaded, or delete them manually.
 Note that [.UNLOAD_DATA]<schema>-TABLES-MIMER.TXT can contain more tables than you have exported data for, but tables that do not have a export data file (.ie `[.unload_data]<schema>-<table>.txt`) are ignored.

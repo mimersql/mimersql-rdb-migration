@@ -5,6 +5,8 @@ $ MIMER_PASS = "gB7Xd92jLmWZ"
 $ SYSPASS=""
 $ OPERATION="ALL"
 $ CLEAN="NO"
+$ LOAD_LOG_STDERR="YES"
+$ DATABANK_FILE=""
 $ IF  P1 .nes. ""
 $   THEN SYSPASS="''P1'"
 $ ELSE
@@ -34,6 +36,11 @@ $   THEN OPERATION="''P5'"
 $ ENDIF
 $ IF  P6 .eqs. "DELETE"
 $   THEN CLEAN="YES"
+$ ENDIF
+$ IF  P7 .nes. ""
+$   THEN DATABANK_FILE="''P7'"
+$ ELSE
+$   DATABANK_FILE=''SCHEMA'_DB
 $ ENDIF
 $
 $! Check that Mimer SQL is installed and started
@@ -99,7 +106,7 @@ $ WRITE OUTFILE "create ident ''MIMER_USER' as user identified by '" + MIMER_PAS
 $ WRITE OUTFILE "drop databank ''SCHEMA'_DB cascade;"
 $ WRITE OUTFILE "alter ident ''MIMER_USER' add os_user ''OS_USER';"
 $ WRITE OUTFILE "WHENEVER ERROR EXIT;"
-$ WRITE OUTFILE "create databank ''SCHEMA'_DB;"
+$ WRITE OUTFILE "create databank ''SCHEMA'_DB IN '" + DATABANK_FILE +"';"
 $ WRITE OUTFILE "grant schema to ''MIMER_USER';"
 $ WRITE OUTFILE "grant table on ''SCHEMA'_DB to ''MIMER_USER';"
 $ WRITE OUTFILE "grant sequence on ''SCHEMA'_DB to ''MIMER_USER';"
@@ -192,7 +199,7 @@ $! Run any extra SQL before loading data
 $ TMP = F$SEARCH("[.EXTRA_SQL]''SCHEMA'-BEFORE-LOAD.SQL")
 $ IF TMP .NES. ""
 $ THEN
-$     WRITE SYS$OUTPUT "Executing extra SQL before load in [.EXTRA_SQL]''SCHEMA'-AFTER-LOAD.SQL"
+$     WRITE SYS$OUTPUT "Executing extra SQL before load in [.EXTRA_SQL]''SCHEMA'-BEFORE-LOAD.SQL"
 $     WRITE SYS$OUTPUT "Log operations to [.LOG]''SCHEMA'-BEFORE-LOAD-SQL.LOG"
 $     OPEN/WRITE OUTFILE [.GEN_SQL]'SCHEMA'-BEFORE-LOAD-SQL.SQL
 $     WRITE OUTFILE "log input,output on '[.LOG]" + SCHEMA + "-BEFORE-LOAD-SQL.LOG';"
@@ -224,7 +231,13 @@ $               define/user sys$output [.LOG]'SCHEMA'_OUTPUT.LOG
 $               bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="delete from ''SCHEMA'.''tab'"
 $           ENDIF
 $           write sys$output "Loading ''SCHEMA'.''tab'"
-$           LOAD_CMD = """" + "load from 'DELIM.DAT', '[.UNLOAD_DATA]" + SCHEMA + "-" + tab + ".TXT' as LATIN1 log '[.LOG]LOAD_" + SCHEMA + "-" + tab + ".LOG' insert into " + SCHEMA + "." + tab + """"
+$           IF LOAD_LOG_STDERR .EQS. "YES"
+$           THEN
+$               LOAD_CMD = """" + "load from 'DELIM.DAT', '[.UNLOAD_DATA]" + SCHEMA + "-" + tab + ".TXT' as LATIN1 log stderr with bulk load insert into " + SCHEMA + "." + tab + """"
+$           ELSE
+$               LOAD_CMD = """" + "load from 'DELIM.DAT', '[.UNLOAD_DATA]" + SCHEMA + "-" + tab + ".TXT' as LATIN1 log '[.LOG]LOAD_" + SCHEMA + "-" + tab + ".LOG' with bulk load insert into " + SCHEMA + "." + tab + """"
+$           ENDIF
+$           START = F$CVTIME(,"ABSOLUTE")
 $           mimload/user="''MIMER_USER'"/password="''MIMER_PASS'" 'LOAD_CMD'
 $!       ELSE
 $!           WRITE SYS$OUTPUT "Skipping ''tab'"
@@ -237,7 +250,7 @@ $ done:
 $   close table_file
 $
 $ WRITE SYS$OUTPUT ""
-
+$
 $ TMP = F$SEARCH("[.EXTRA_SQL]''SCHEMA'-AFTER-LOAD.SQL")
 $ IF TMP .NES. ""
 $ THEN

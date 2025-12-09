@@ -8,6 +8,7 @@ ENCODING="latin1"
 OPERATION="ALL"
 DELETE="NO"
 SHOW_TIMING="NO"
+DATABANK_FILE=""
 usage()
 {
 cat << EOF
@@ -25,6 +26,7 @@ OPTIONS:
    -d      Delete all rows in tables to be loaded before doing the load
    -t      Table to load (default all tables)
    -T      Show timing of the load operations
+   -f      Main databank file (if not set the schema name will be used and the path is the database home directory)
 EOF
 }
 
@@ -121,7 +123,7 @@ check_mimer()
 }
 
 
-while getopts ":p:s:u:P:e:o:t:d:T" OPTION
+while getopts ":p:s:u:P:e:o:t:d:f:T" OPTION
 do
      case $OPTION in
          'p')
@@ -148,6 +150,9 @@ do
          't')
             TABLE=${OPTARG}
              ;;
+         'f')
+            DATABANK_FILE=${OPTARG}
+             ;;
           'T')
             SHOW_TIMING="YES"
              ;;      
@@ -169,6 +174,11 @@ if [ "${SCHEMA}" = "" ]; then
     SCHEMA=${SCHEMA^^}
 fi
 
+if [ -z "${DATABANK_FILE}" ]; then
+    DATABANK_FILE="${SCHEMA}_DB.dbf"
+elif [ "${DATABANK_FILE##*.}" = "${DATABANK_FILE}" ]; then
+    DATABANK_FILE="${DATABANK_FILE}.dbf"
+fi
 
 # Check that Mimer SQL is installed and started
 check_mimer
@@ -223,7 +233,7 @@ if [ "${OPERATION}" = "CREATE" -o "${OPERATION}" = "ALL" ]; then
     echo "drop databank ${SCHEMA}_DB cascade;" >> ./GEN_SQL/CREATE_USERS_${SCHEMA}.SQL
     echo "alter ident ${MIMER_USER} add os_user '${OS_USER}';" >> ./GEN_SQL/CREATE_USERS_${SCHEMA}.SQL
     echo "WHENEVER ERROR EXIT;" >> ./GEN_SQL/CREATE_USERS_${SCHEMA}.SQL
-    echo "create databank ${SCHEMA}_DB;" >> ./GEN_SQL/CREATE_USERS_${SCHEMA}.SQL
+    echo "create databank ${SCHEMA}_DB in '${DATABANK_FILE}';" >> ./GEN_SQL/CREATE_USERS_${SCHEMA}.SQL
     echo "grant schema to ${MIMER_USER};" >> ./GEN_SQL/CREATE_USERS_${SCHEMA}.SQL
     echo "grant table on ${SCHEMA}_DB to ${MIMER_USER};" >> ./GEN_SQL/CREATE_USERS_${SCHEMA}.SQL
     echo "grant sequence on ${SCHEMA}_DB to ${MIMER_USER};">> ./GEN_SQL/CREATE_USERS_${SCHEMA}.SQL
@@ -290,7 +300,7 @@ if [ "${OPERATION}" != "CREATE" ]; then
         echo "EXIT;" >> ./GEN_SQL/${SCHEMA}-BEFORE-LOAD_SQL.SQL
         bsql --username=${MIMER_USER} --password=${MIMER_PASS} --query="read './GEN_SQL/${SCHEMA}-BEFORE-LOAD_SQL.SQL'" >> ./LOG/TMP_OUTPUT.LOG 2>&1
     fi
-    if [ "${OPERATION}" = "LOAD" ]; then
+    if [ "${OPERATION}" != "CONTINUE_LOAD" ]; then
         echo "Retreiving tables to load"
         # Load tables in correct order so we don't violate foreign key constraints
         if [ -e ${TABLE_DEFS} ]; then
@@ -334,9 +344,9 @@ if [ "${OPERATION}" != "CREATE" ]; then
         elapsed=$(echo "$end - $start" | bc)
         printf 'All tables loaded in %02d:%02d:%02d\n' $((elapsed/3600)) $((elapsed%3600/60)) $((elapsed%60))
     fi
-    echo "Updating statistics"
-    bsql --username=SYSADM --password=${SYSADM_PASS} --query="update statistics for ident SYSTEM" ${MIMER_DATABASE}
-    bsql --username=${MIMER_USER} --password=${MIMER_PASS} --query="update statistics for schema ${SCHEMA}" ${MIMER_DATABASE}
+#    echo "Updating statistics"
+#    bsql --username=SYSADM --password=${SYSADM_PASS} --query="update statistics for ident SYSTEM" ${MIMER_DATABASE}
+#    bsql --username=${MIMER_USER} --password=${MIMER_PASS} --query="update statistics for schema ${SCHEMA}" ${MIMER_DATABASE}
     echo "Finished loading data into Mimer SQL using the database user ${MIMER_USER} and database schema ${SCHEMA}"
 fi # End of LOAD or CONTINUE_LOAD
 echo ""
