@@ -62,8 +62,10 @@ To handle objects that need to be manually migrated or to execute other custom S
   - Executed as SYSADM after the schema is created. This can be for example changing the size of a databank.
 - [.extra_sql]<schema>-AFTER-CREATE.SQL
   - Executed as the specified user in the schema created. This can be manually changed index or other optimizations.
+- [.extra_sql]<schema>-BEFORE-LOAD.SQL
+  - Executed just before loading data into the tables. An example of SQL to put here is temporarily drop indexes, triggers or constraints
 - [.extra_sql]<schema>-AFTER-LOAD.SQL
-  - Executed as the specified user after data is loaded. An example of SQL to put here is manually created triggers.
+  - Executed as the specified user after data is loaded. An example of SQL to put here is manually created triggers and objects temporarily dropped before load.
 If the files are found they are executed, otherwise ignored.
 
 
