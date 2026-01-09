@@ -83,11 +83,20 @@ $   CRE/DIR [.LOG]
 $ ELSE
 $   TMP = F$SEARCH("[.LOG]''SCHEMA'*.*;*")
 $   IF TMP .NES. "" THEN DELETE [.LOG]'SCHEMA'*.*;*
+$   TMP = F$SEARCH("[.LOG]*_''SCHEMA'*.*;*")
+$   IF TMP .NES. "" THEN DELETE [.LOG]*_'SCHEMA'*.*;*
 $ ENDIF
 $! Create directory for generated files if it doesn't exist
 $ IF F$PARSE("[.GEN_SQL]","","DIRECTORY") .EQS. ""
 $ THEN
 $   CRE/DIR [.GEN_SQL]
+$ ELSE
+$   TMP = F$SEARCH("[.GEN_SQL]''SCHEMA'-*.*;*")
+$   IF TMP .NES. "" THEN DELETE [.GEN_SQL]'SCHEMA'-*.*;*
+$   TMP = F$SEARCH("[.GEN_SQL]''SCHEMA'_*.*;*")
+$   IF TMP .NES. "" THEN DELETE [.GEN_SQL]'SCHEMA'_*.*;*
+$   TMP = F$SEARCH("[.GEN_SQL]*_''SCHEMA'.*;*")
+$   IF TMP .NES. "" THEN DELETE [.GEN_SQL]*_'SCHEMA'*.*;*
 $ ENDIF
 $! Add Mimer SQL version information to main log file
 $ define/user sys$output [.LOG]'SCHEMA'_MIMINFO.LOG
