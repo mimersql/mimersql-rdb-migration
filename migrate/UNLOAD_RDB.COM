@@ -7,8 +7,7 @@ $ ENDIF
 $ IF  P2 .nes. ""
 $   THEN SCHEMA="''P2'"
 $ ELSE
-$   WRITE SYS$OUTPUT "Specify database used as parameter one"
-$   WRITE SYS$OUTPUT "This will be used as schema in Mimer SQL"
+$   WRITE SYS$OUTPUT "Specify what schema name to put the database under in Mimer SQL as parameter two"
 $   EXIT 4
 $ ENDIF
 $ WRITE SYS$OUTPUT "Checking directory and files"
