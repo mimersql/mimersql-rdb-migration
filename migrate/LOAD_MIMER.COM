@@ -7,6 +7,7 @@ $ OPERATION="ALL"
 $ CLEAN="NO"
 $ LOAD_LOG_STDERR="YES"
 $ DATABANK_FILE=""
+$ USE_JDBC="YES"
 $ IF  P1 .nes. ""
 $   THEN SYSPASS="''P1'"
 $ ELSE
@@ -32,7 +33,9 @@ $ IF  P4 .nes. ""
 $   THEN MIMER_PASS="''P4'"
 $ ENDIF
 $ IF  P5 .nes. ""
-$   THEN OPERATION="''P5'"
+$   THEN
+$   WRITE SYS$OUTPUT "Setting operation to ''P5'"
+$   OPERATION="''P5'"
 $ ENDIF
 $ IF  P6 .eqs. "DELETE"
 $   THEN CLEAN="YES"
@@ -42,6 +45,9 @@ $   THEN DATABANK_FILE="''P7'"
 $ ELSE
 $   DATABANK_FILE=''SCHEMA'_DB
 $ ENDIF
+$
+$ IF OPERATION .EQS. "RMULOAD" THEN USE_JDBC="NO"
+$ IF OPERATION .EQS. "CONTINUE_RMULOAD" THEN USE_JDBC="NO"
 $
 $! Check that Mimer SQL is installed and started
 $ CALL CHECK_MIMER
@@ -70,12 +76,11 @@ $   ENDIF
 $ ENDIF
 $ WRITE SYS$OUTPUT "Check done"
 $
-$ IF  OPERATION .EQS. "LOAD"
-$   THEN GOTO LOAD_DATA
+$ IF OPERATION .NES. "CREATE"
+$     THEN
+$     IF OPERATION .NES. "ALL" THEN GOTO LOAD_DATA
 $ ENDIF
-$ IF  OPERATION .EQS. "CONTINUE_LOAD"
-$   THEN GOTO CONTINUE_LOAD
-$ ENDIF
+$
 $! Create directory for log files or clear it if it exists
 $ IF F$PARSE("[.LOG]","","DIRECTORY") .EQS. ""
 $ THEN
@@ -185,7 +190,11 @@ $ WRITE SYS$OUTPUT ""
 $ IF  OPERATION .EQS. "CREATE"
 $   THEN GOTO EXIT_OK
 $ ENDIF
-$ WRITE SYS$OUTPUT "Loading exported data into Mimer SQL"
+$ IF OPERATION .EQS. "RMULOAD"
+$   THEN WRITE SYS$OUTPUT "Loading exported data into Mimer SQL"
+$ ELSE
+$   WRITE SYS$OUTPUT "Exporting data from Rdb and loading into Mimer SQL"
+$ ENDIF
 $ WRITE SYS$OUTPUT "Log files for the load operations can be found in [.LOG]"
 $ LOAD_DATA:
 $   TMP = F$SEARCH("''TABLE_DEFS'")
@@ -218,6 +227,10 @@ $     WRITE OUTFILE "read '[.EXTRA_SQL]" + "''SCHEMA'-BEFORE-LOAD.SQL';"
 $     CLOSE OUTFILE
 $     define/user sys$output [.LOG]'SCHEMA'-BEFORE-LOAD-OUTPUT.LOG
 $     bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="read '[.GEN_SQL]''SCHEMA'-BEFORE-LOAD-SQL.SQL'"
+$ ENDIF
+$ IF OPERATION .NES. "RMULOAD" 
+$     THEN 
+$     IF OPERATION .NES. "CONTINUE_RMULOAD" THEN GOTO DIRECT_LOAD
 $ ENDIF
 $ ! Open the file with tables
 $ open/read table_file 'TABLE_DEFS'
@@ -259,7 +272,12 @@ $ done:
 $   close table_file
 $
 $ WRITE SYS$OUTPUT ""
-$
+$ IF OPERATION .EQS. "RMULOAD" THEN GOTO LOAD_DONE
+$ IF OPERATION .EQS. "CONTINUE_RMULOAD" THEN GOTO LOAD_DONE
+$ DIRECT_LOAD:
+$ WRITE SYS$OUTPUT "Running direct load from Rdb to Mimer SQL"
+$ java "MimerJCopy" -f [.unload_data]'SCHEMA'-TABLES-MIMER.TXT -t 'SCHEMA' -u "''MIMER_USER'" -p "''MIMER_PASS'"
+$ LOAD_DONE:
 $ TMP = F$SEARCH("[.EXTRA_SQL]''SCHEMA'-AFTER-LOAD.SQL")
 $ IF TMP .NES. ""
 $ THEN
@@ -289,13 +307,69 @@ $   WRITE SYS$OUTPUT "MIMER_DATABASE not defined"
 $   GOTO EXIT_ERR
 $ ENDIF
 $ WRITE SYS$OUTPUT "Using Mimer SQL database ''F$TRNLNM("MIMER_DATABASE")'. Mimer SQL version information:"
+$! Check if we use JDBC load and in that case check the target.url
+$ IF USE_JDBC .EQS. "YES"
+$ THEN
+$!  Get target.url from jdbc.properties
+$   temp_file = "SYS$SCRATCH:search_result_" + F$GETJPI("", "PID") + ".tmp"
+$   SEARCH jdbc.properties "target.url" /OUTPUT='temp_file'
+$
+$   ! Read the result from the search of jdbc.properties
+$   OPEN/READ INFILE 'temp_file'
+$   READ INFILE line
+$   CLOSE INFILE
+$   DELETE 'temp_file';*
+$ 
+$   ! Extract value after "=" in target.url
+$   eq_pos = F$LOCATE("=", line)
+$   target_url = F$EXTRACT(eq_pos + 1, 999, line)
+$ 
+$   WRITE SYS$OUTPUT "Target URL in jdbc.properties: ", target_url
+$
+$!  Extract the database name from target.url (part after last "/" or ":")
+$!  Determine delimiter: use "/" if present, otherwise ":"
+$   IF F$LOCATE("/", target_url) .LT. F$LENGTH(target_url)
+$   THEN
+$       delim = "/"
+$   ELSE
+$       delim = ":"
+$   ENDIF
+$!  Loop to get the last element
+$   index = 0
+$   loop:
+$       element = F$ELEMENT(index, delim, target_url)
+$       IF element .EQS. delim THEN GOTO done
+$       db_name = element
+$       index = index + 1
+$       GOTO loop
+$   done:
+$   m_db = F$EDIT(F$TRNLNM("MIMER_DATABASE"),"UPCASE")
+$   t_db = F$EDIT(db_name,"UPCASE")
+$   IF m_db .NES. t_db 
+$       THEN
+$           WRITE SYS$OUTPUT "##################"
+$           WRITE SYS$OUTPUT "Warning: The database name in target.url is not the same as MIMER_DATABASE."
+$           WRITE SYS$OUTPUT "Make sure to use the same database in target.url as the database in MIMER_DATABASE."
+$           WRITE SYS$OUTPUT "##################"
+$   ENDIF
+$ ENDIF
 $ MIMINFO/VERSION
+$ SET NOON
+$ DEF/USER SYS$ERROR NL:
+$ DEF/USER SYS$OUTPUT NL:
 $ MIMCONTROL/STATUS/DCL
+$ ON ERROR THEN GOTO MIMCONTROL_ERR
 $ IF F$ELEMENT(0,",",MIMER_STATUS) .NES. "Running"
 $ THEN
 $   WRITE SYS$OUTPUT "Mimer SQL is not running"
 $   GOTO EXIT_ERR
 $ ENDIF
+$ SET ON
+$
+$ MIMCONTROL_ERR:
+$ WRITE SYS$OUTPUT "Note: Could not get status of the Mimer SQL server"
+$ WRITE SYS$OUTPUT "If it is a remote server this is expected"
+$
 $ WRITE SYS$OUTPUT "Mimer SQL environment is ok"
 $ WRITE SYS$OUTPUT ""
 $ EXIT 1

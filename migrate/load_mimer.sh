@@ -9,6 +9,7 @@ OPERATION="ALL"
 DELETE="NO"
 SHOW_TIMING="NO"
 DATABANK_FILE=""
+USE_JDBC="YES"
 usage()
 {
 cat << EOF
@@ -22,7 +23,7 @@ OPTIONS:
    -u      Mimer SQL user, default is ${MIMER_USER}
    -P      Password for Mimer SQL user, default is ${MIMER_PASS}
    -e      Encoding of the input files, default is latin1
-   -o      Operation, can be CREATE, LOAD, or CONTINUE_LOAD. Default is to run all steps
+   -o      Operation, can be CREATE, LOAD, CONTINUE_LOAD, RMULOAD, or CONTINUE_RMULOAD. Default is to run all steps
    -d      Delete all rows in tables to be loaded before doing the load
    -t      Table to load (default all tables)
    -T      Show timing of the load operations
@@ -31,6 +32,16 @@ EOF
 }
 
 load_table(){
+    tab=${1}
+    java -cp ${MIGRATE_CLASSPATH} MimerJCopy -u ${MIMER_USER} -p ${MIMER_PASS} -s ${tab} -t ${SCHEMA}.${tab}
+}
+
+load_all(){
+    tab_file=${1}
+    java -cp ${MIGRATE_CLASSPATH} MimerJCopy -u ${MIMER_USER} -p ${MIMER_PASS} -f ${tab_file} -t ${SCHEMA}
+}
+
+rmu_load_table(){
     tab=${1}
     if [ -e ./UNLOAD_DATA/${SCHEMA}-${tab}.TXT ]; then
         if [ "${DELETE}" = "YES" ]; then
@@ -115,11 +126,36 @@ check_mimer()
         echo "Using Mimer SQL database $MIMER_DATABASE"
     fi
 
-    status=$(mimcontrol -c -b)
-    if [[ $status != Running,* ]]; then
-        echo "Mimer SQL is not running"
-        exit 1
+    #If using direct load using JDBC, check Java environment
+    if [ "${USE_JDBC}" = "YES" ]; then
+        if [ "${MIGRATE_CLASSPATH}" = "" ]; then
+            echo "MIGRATE_CLASSPATH is not set"
+            echo "It must include the path to the JDBC drivers and mimerjcopy.jar"
+            echo "For example MIGRATE_CLASSPATH=/usr/lib/rdbjdbc.jar:/usr/lib/mimjdbc3.jar:./mimerjcopy.jar"
+            exit 1
+        fi
+        # Check that target.url in jdbc.properties matches MIMER_DATABASE
+        if [ -f jdbc.properties ]; then
+            target_url=$(grep '^target\.url=' jdbc.properties | sed 's/^target\.url=//')
+            echo "Target URL in jdbc.properties: ${target_url}"
+            if [[ "${target_url}" == */* ]]; then
+                db_name="${target_url##*/}"
+            else
+                db_name="${target_url##*:}"
+            fi
+            if [ -n "${db_name}" ] && ! [[ "${db_name,,}" = "${MIMER_DATABASE,,}" ]]; then
+                echo "##################"
+                echo "Warning: The database name in target.url (${db_name}) is not the same as MIMER_DATABASE (${MIMER_DATABASE})."
+                echo "Make sure to use the same database in target.url as the database in MIMER_DATABASE."
+                echo "##################"
+            fi
+        fi
     fi
+    # status=$(mimcontrol -c -b)
+    # if [[ $status != Running,* ]]; then
+    #     echo "Mimer SQL is not running"
+    #     exit 1
+    # fi
 }
 
 
@@ -141,7 +177,7 @@ do
          'P')
             MIMER_PASS=${OPTARG}
              ;;
-          'd')
+         'd')
             DELETE="YES"
              ;;
          'e')
@@ -174,10 +210,14 @@ if [ "${SCHEMA}" = "" ]; then
     SCHEMA=${SCHEMA^^}
 fi
 
-if [ -z "${DATABANK_FILE}" ]; then
-    DATABANK_FILE="${SCHEMA}_DB.dbf"
+if [ "${DATABANK_FILE}" = "" ]; then
+    DATABANK_FILE="${SCHEMA}.dbf"
 elif [ "${DATABANK_FILE##*.}" = "${DATABANK_FILE}" ]; then
     DATABANK_FILE="${DATABANK_FILE}.dbf"
+fi
+
+if [ "${OPERATION}" = "RMULOAD" -o "${OPERATION}" = "CONTINUE_RMULOAD" ]; then
+    USE_JDBC="NO"
 fi
 
 # Check that Mimer SQL is installed and started
@@ -300,7 +340,7 @@ if [ "${OPERATION}" != "CREATE" ]; then
         echo "EXIT;" >> ./GEN_SQL/${SCHEMA}-BEFORE-LOAD_SQL.SQL
         bsql --username=${MIMER_USER} --password=${MIMER_PASS} --query="read './GEN_SQL/${SCHEMA}-BEFORE-LOAD_SQL.SQL'" >> ./LOG/TMP_OUTPUT.LOG 2>&1
     fi
-    if [ "${OPERATION}" != "CONTINUE_LOAD" ]; then
+    if [ "${OPERATION}" != "CONTINUE_LOAD" -a "${OPERATION}" != "CONTINUE_RMULOAD" ]; then
         echo "Retreiving tables to load"
         # Load tables in correct order so we don't violate foreign key constraints
         if [ -e ${TABLE_DEFS} ]; then
@@ -317,15 +357,23 @@ if [ "${OPERATION}" != "CREATE" ]; then
         total_start=$(date +%s)
     fi    
     if [ "${TABLE}" != "" ]; then
-        load_table ${TABLE}
+        if [ "${USE_JDBC}" = "YES" ]; then
+            load_table ${TABLE}
+        else
+            rmu_load_table ${TABLE}
+        fi
     else
-        #Open the file with tables
-        while IFS= read -r line; do
-            tab=$(echo "$line" | sed 's/^[ \t]*//;s/[ \t]*$//')
-            if [ "$tab" != "" ]; then
-                load_table ${tab}
-            fi
-        done < ${TABLE_DEFS}
+        if [ "${USE_JDBC}" = "YES" ]; then
+            load_all ${TABLE_DEFS}
+        else
+            #Open the file with tables
+            while IFS= read -r line; do
+                tab=$(echo "$line" | sed 's/^[ \t]*//;s/[ \t]*$//')
+                if [ "$tab" != "" ]; then
+                    rmu_load_table ${tab}
+                fi
+            done < ${TABLE_DEFS}
+        fi
     fi
     echo "Finished loading data"
     echo ""

@@ -1,3 +1,4 @@
+$ OPERATION="SCHEMA"
 $ IF  P1 .nes. ""
 $   THEN DB="''P1'"
 $ ELSE
@@ -9,6 +10,9 @@ $   THEN SCHEMA="''P2'"
 $ ELSE
 $   WRITE SYS$OUTPUT "Specify what schema name to put the database under in Mimer SQL as parameter two"
 $   EXIT 4
+$ ENDIF
+$ IF  P3 .nes. ""
+$   THEN OPERATION="''P3'"
 $ ENDIF
 $ WRITE SYS$OUTPUT "Checking directory and files"
 $ TABLE_DEFS = "[.UNLOAD_DATA]''SCHEMA'-TABLES-RDB.TXT"
@@ -28,6 +32,7 @@ $ DEFINE/NOLOG EXPORT_DB 'DB'
 $
 $ WRITE SYS$OUTPUT "Extracting database schema"
 $ RMU/EXTRACT/Output=[.UNLOAD_DATA]'SCHEMA'-SCHEMA-RDB.SQL 'DB'
+$ IF OPERATION .nes. "ALL" THEN GOTO done
 $ define/user sys$output 'TABLE_DEFS'
 $run sql$
 attach 'f EXPORT_DB';
@@ -44,13 +49,13 @@ $ open/read input_chan 'TABLE_DEFS'
 $
 $ ! Loop over each line in the file
 $ loop:
-$   read/end_of_file=done input_chan line
+$   read/end_of_file=loop_done input_chan line
 $   tab = f$edit(line, "TRIM")
 $   write sys$output "Unloading ''tab'"
 $   rmu/unload/RECORD_DEFINITION=(FORMAT=DELIMITED_TEXT, PREFIX="", SUFFIX="", separator="|", null="\-") 'DB' 'tab' [.UNLOAD_DATA]'SCHEMA'-'tab'.TXT
 $   goto loop
-$
-$ ! Close the file and exit
-$ done:
+$ loop_done:
 $   close input_chan
+$
+$ done:
 $   exit
