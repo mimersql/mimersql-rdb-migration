@@ -33,12 +33,12 @@ EOF
 
 load_table(){
     tab=${1}
-    java -cp ${MIGRATE_CLASSPATH} MimerJCopy -u ${MIMER_USER} -p ${MIMER_PASS} -s ${tab} -t ${SCHEMA}.${tab}
+    java -cp ${MIGRATE_CLASSPATH} MimerJMigrate -u ${MIMER_USER} -p ${MIMER_PASS} -s ${tab} -t ${SCHEMA}.${tab}
 }
 
 load_all(){
     tab_file=${1}
-    java -cp ${MIGRATE_CLASSPATH} MimerJCopy -u ${MIMER_USER} -p ${MIMER_PASS} -f ${tab_file} -t ${SCHEMA}
+    java -cp ${MIGRATE_CLASSPATH} MimerJMigrate -u ${MIMER_USER} -p ${MIMER_PASS} -f ${tab_file} -t ${SCHEMA}
 }
 
 rmu_load_table(){
@@ -130,8 +130,8 @@ check_mimer()
     if [ "${USE_JDBC}" = "YES" ]; then
         if [ "${MIGRATE_CLASSPATH}" = "" ]; then
             echo "MIGRATE_CLASSPATH is not set"
-            echo "It must include the path to the JDBC drivers and mimerjcopy.jar"
-            echo "For example MIGRATE_CLASSPATH=/usr/lib/rdbjdbc.jar:/usr/lib/mimjdbc3.jar:./mimerjcopy.jar"
+            echo "It must include the path to the JDBC drivers and mimerjmigrate.jar"
+            echo "For example MIGRATE_CLASSPATH=/usr/lib/rdbjdbc.jar:/usr/lib/mimjdbc3.jar:./mimerjmigrate.jar"
             exit 1
         fi
         # Check that target.url in jdbc.properties matches MIMER_DATABASE

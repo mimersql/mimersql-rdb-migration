@@ -23,7 +23,7 @@ MIMCONTROL/START
 ### JDBC configuraiton
 
 When the default direct data migration is used, the property file `jdbc.properties` in the root directory is used to configure the source and target database. Edit this file to specify `source.driver`, `source.url`, `source.username`, `source.password`, `target.url`, `target.user`, and `target.password` where `source.*` configures how to access the Rdb database and `target.*` how to access the Mimer SQL database. How these should be configured depends on where you run the data migration step (i.e . loading of data). The `target.user` and `target.password` must be the same as you use in the `@load_mimer` command below.
-This step can be skipped if file based migration is used, see below for more information. See "readme_mimerjcopy.md" for more information.
+This step can be skipped if file based migration is used, see below for more information. See "readme_mimerjmigrate.md" for more information.
 
 The OpenJDK 8 Java runtime environmnet must be installed.
 
@@ -44,7 +44,7 @@ When the command procedures are executed, several directories are created:
 
 The migration can be done in two ways and both are handled by the provided `DCL`scripts:
 
-1. Direct migration using the included MimerJCopy that will migrate data directly from Rdb to Mimer SQL without intermediate files. This is the default method.
+1. Direct migration using the included MimerJMigrate that will migrate data directly from Rdb to Mimer SQL without intermediate files. This is the default method.
 2. File base data migration by exporting all data from Rdb into files using `RMU` and then loading the data into Mimer SQL.
 
 Both migration methods will extract the SQL schema from Rdb, translate the schema to Mimer SQL and create it in the Mimer SQL databasen, load the data into Mimer SQL, and then optionally execute some custom SQL.
@@ -100,7 +100,7 @@ The `load_mimer.com` script will perform the following steps when running in def
 5. Execute the translated SQL schema file using Mimer SQL.
 6. Run `dbanalyzer` and apply the suggested changes on the created schema to optimize the database structure.
 7. If [.extra_sql]< schema >-system-after-create.sql or [.extra_sql]< schema>-after-create.sql exists, execute them to run custom SQL, such as changing table or databank definitions.
-8. Load each table into Mimer SQL using either MimerJCopy for direct migration or the exported data files for file based migration.
+8. Load each table into Mimer SQL using either MimerJMigrate for direct migration or the exported data files for file based migration.
 9. If [.extra_sql]<schema >-after-load.sql exists, execute it to run custom SQL, such as creating manually converted triggers.
 10. Update database statistics for the Mimer SQL database to ensure efficient query execution.
 
@@ -109,9 +109,9 @@ The entire migration can be performed on a single machine that has both Mimer SQ
 Using the `operation` parameter with `load_mimer.com`it is possible to divide the migration steps into different part and only run the translation, creation, and optimization or loading of data seperately. This is usefull for example to experiment with the schema creation and optimize it before loading data. The default is to run all steps (the same as specifying ALL). Valid operations are:
 
 - `CREATE`: Only translate, create, and optimize the schema, do not load any data
-- `LOAD`: Only load data into an already created schema using the direct migration with MimerJCopy.
+- `LOAD`: Only load data into an already created schema using the direct migration with MimerJMigrate.
 - `RMULOAD`: Only load data into an already created schema using the exported data files.
-- `CONTINUE_LOAD`: Continue the load after an aborted load operation using the direct data migration with MimerJCopy.
+- `CONTINUE_LOAD`: Continue the load after an aborted load operation using the direct data migration with MimerJMigrate.
 - `CONTINUE_RMULOAD`: Continue the load after an aborted load operation using the exported data files.
 
 It is also possible to pass `DELETE` as an extra 6:th argument when running `CONTINUE_LOAD`. This will delete all rows in the tables that are being reloaded.

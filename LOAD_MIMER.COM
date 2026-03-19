@@ -276,7 +276,7 @@ $ IF OPERATION .EQS. "RMULOAD" THEN GOTO LOAD_DONE
 $ IF OPERATION .EQS. "CONTINUE_RMULOAD" THEN GOTO LOAD_DONE
 $ DIRECT_LOAD:
 $ WRITE SYS$OUTPUT "Running direct load from Rdb to Mimer SQL"
-$ java "MimerJCopy" -f [.unload_data]'SCHEMA'-TABLES-MIMER.TXT -t 'SCHEMA' -u "''MIMER_USER'" -p "''MIMER_PASS'"
+$ java "MimerJMigrate" -f [.unload_data]'SCHEMA'-TABLES-MIMER.TXT -t 'SCHEMA' -u "''MIMER_USER'" -p "''MIMER_PASS'"
 $ LOAD_DONE:
 $ TMP = F$SEARCH("[.EXTRA_SQL]''SCHEMA'-AFTER-LOAD.SQL")
 $ IF TMP .NES. ""
