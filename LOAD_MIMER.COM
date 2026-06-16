@@ -210,7 +210,9 @@ $ WRITE OUTFILE "set silence on;"
 $ WRITE OUTFILE "select object_name from system.objects where object_type = 'BASE TABLE' "
 $ WRITE OUTFILE "and object_schema = '" + SCHEMA + "' order by coalesce(object_altered, object_created);"
 $ CLOSE OUTFILE
-$ define/user sys$output [.LOG]get_tables_'SCHEMA'.LOG
+$ TMP = F$SEARCH("[.LOG]''SCHEMA'-GET-TABLES.LOG")
+$ IF TMP .NES. "" THEN DELETE [.LOG]'SCHEMA'-GET-TABLES.LOG;*
+$ define/user sys$output [.LOG]'SCHEMA'-GET-TABLES.LOG
 $ bsql/username=SYSADM/password="''SYSPASS'"/query="read '[.GEN_SQL]GET_TABLES_''SCHEMA'.SQL'"
 $ CONTINUE_LOAD:
 $! Run any extra SQL before loading data
@@ -225,6 +227,8 @@ $     WRITE OUTFILE "set output off;"
 $     WRITE OUTFILE "set schema ''SCHEMA';"
 $     WRITE OUTFILE "read '[.EXTRA_SQL]" + "''SCHEMA'-BEFORE-LOAD.SQL';"
 $     CLOSE OUTFILE
+$     TMP = F$SEARCH("[.LOG]''SCHEMA'-BEFORE-LOAD-OUTPUT.LOG")
+$     IF TMP .NES. "" THEN DELETE [.LOG]'SCHEMA'-BEFORE-LOAD-OUTPUT.LOG;*
 $     define/user sys$output [.LOG]'SCHEMA'-BEFORE-LOAD-OUTPUT.LOG
 $     bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="read '[.GEN_SQL]''SCHEMA'-BEFORE-LOAD-SQL.SQL'"
 $ ENDIF
@@ -253,11 +257,13 @@ $               define/user sys$output [.LOG]'SCHEMA'_OUTPUT.LOG
 $               bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="delete from ''SCHEMA'.''tab'"
 $           ENDIF
 $           write sys$output "Loading ''SCHEMA'.''tab'"
+$           QSCHEMA = """" + """" + SCHEMA + """" + """"
+$           QTABLE  = """" + """" + tab    + """" + """"
 $           IF LOAD_LOG_STDERR .EQS. "YES"
 $           THEN
-$               LOAD_CMD = """" + "load from 'DELIM.DAT', '[.UNLOAD_DATA]" + SCHEMA + "-" + tab + ".TXT' as LATIN1 log stderr with bulk load insert into " + SCHEMA + "." + tab + """"
+$               LOAD_CMD = """" + "load from 'DELIM.DAT', '[.UNLOAD_DATA]" + SCHEMA + "-" + tab + ".TXT' as LATIN1 log stderr with bulk load insert into " + QSCHEMA + "." + QTABLE + """"
 $           ELSE
-$               LOAD_CMD = """" + "load from 'DELIM.DAT', '[.UNLOAD_DATA]" + SCHEMA + "-" + tab + ".TXT' as LATIN1 log '[.LOG]LOAD_" + SCHEMA + "-" + tab + ".LOG' with bulk load insert into " + SCHEMA + "." + tab + """"
+$               LOAD_CMD = """" + "load from 'DELIM.DAT', '[.UNLOAD_DATA]" + SCHEMA + "-" + tab + ".TXT' as LATIN1 log '[.LOG]LOAD_" + SCHEMA + "-" + tab + ".LOG' with bulk load insert into " + QSCHEMA + "." + QTABLE + """"
 $           ENDIF
 $           START = F$CVTIME(,"ABSOLUTE")
 $           mimload/user="''MIMER_USER'"/password="''MIMER_PASS'" 'LOAD_CMD'
@@ -276,7 +282,7 @@ $ IF OPERATION .EQS. "RMULOAD" THEN GOTO LOAD_DONE
 $ IF OPERATION .EQS. "CONTINUE_RMULOAD" THEN GOTO LOAD_DONE
 $ DIRECT_LOAD:
 $ WRITE SYS$OUTPUT "Running direct load from Rdb to Mimer SQL"
-$ java "MimerJMigrate" -f [.unload_data]'SCHEMA'-TABLES-MIMER.TXT -t 'SCHEMA' -u "''MIMER_USER'" -p "''MIMER_PASS'"
+$ java "MimerJMigrate" -f [.unload_data]'SCHEMA'-TABLES-MIMER.TXT -t 'SCHEMA' -u "''MIMER_USER'" -p "''MIMER_PASS'" -c [.CONF]'SCHEMA'.properties
 $ LOAD_DONE:
 $ TMP = F$SEARCH("[.EXTRA_SQL]''SCHEMA'-AFTER-LOAD.SQL")
 $ IF TMP .NES. ""
@@ -310,11 +316,24 @@ $ WRITE SYS$OUTPUT "Using Mimer SQL database ''F$TRNLNM("MIMER_DATABASE")'. Mime
 $! Check if we use JDBC load and in that case check the target.url
 $ IF USE_JDBC .EQS. "YES"
 $ THEN
-$!  Get target.url from jdbc.properties
+$!  Set JAVA$CLASSPATH if not set
+$   IF ''F$TRNLNM("JAVA$CLASSPATH")' .EQS. ""
+$   THEN
+$       WRITE SYS$OUTPUT "JAVA$CLASSPATH not defined, using default settings"
+$       IF ''F$TRNLNM("RDB$JDBC_HOME")' .EQS. ""
+$       THEN
+$           WRITE SYS$OUTPUT "Rdb JDBC home not defined in RDB$JDBC_HOME, cannot set JAVA$CLASSPATH for JDBC load"
+$           GOTO EXIT_ERR
+$       ENDIF
+$       DEFINE JAVA$CLASSPATH MIMER$LIB:MIMJDBC3.JAR, RDB$JDBC_HOME:RDBNATIVEV8.JAR, SYS$DISK:[]MIMERJMIGRATE.JAR
+$   ELSE
+$       WRITE SYS$OUTPUT "Using JAVA$CLASSPATH: ''F$TRNLNM("JAVA$CLASSPATH")'"
+$   ENDIF
+$!  Get target.url from property file specified in [.CONF]'SCHEMA'.properties
 $   temp_file = "SYS$SCRATCH:search_result_" + F$GETJPI("", "PID") + ".tmp"
-$   SEARCH jdbc.properties "target.url" /OUTPUT='temp_file'
+$   SEARCH [.CONF]'SCHEMA'.properties "target.url" /OUTPUT='temp_file'
 $
-$   ! Read the result from the search of jdbc.properties
+$   ! Read the result from the search of [.CONF]'SCHEMA'.properties
 $   OPEN/READ INFILE 'temp_file'
 $   READ INFILE line
 $   CLOSE INFILE
@@ -324,7 +343,7 @@ $   ! Extract value after "=" in target.url
 $   eq_pos = F$LOCATE("=", line)
 $   target_url = F$EXTRACT(eq_pos + 1, 999, line)
 $ 
-$   WRITE SYS$OUTPUT "Target URL in jdbc.properties: ", target_url
+$   WRITE SYS$OUTPUT "Target URL in [.CONF]'SCHEMA'.properties: ", target_url
 $
 $!  Extract the database name from target.url (part after last "/" or ":")
 $!  Determine delimiter: use "/" if present, otherwise ":"
@@ -358,6 +377,10 @@ $ SET NOON
 $ DEF/USER SYS$ERROR NL:
 $ DEF/USER SYS$OUTPUT NL:
 $ MIMCONTROL/STATUS/DCL
+$ IF F$TYPE(MIMER_STATUS) .EQS. ""
+$ THEN
+$   GOTO MIMCONTROL_ERR
+$ ENDIF
 $ ON ERROR THEN GOTO MIMCONTROL_ERR
 $ IF F$ELEMENT(0,",",MIMER_STATUS) .NES. "Running"
 $ THEN

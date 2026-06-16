@@ -22,7 +22,8 @@ MIMCONTROL/START
 
 ### JDBC configuraiton
 
-When the default direct data migration is used, the property file `jdbc.properties` in the root directory is used to configure the source and target database. Edit this file to specify `source.driver`, `source.url`, `source.username`, `source.password`, `target.url`, `target.user`, and `target.password` where `source.*` configures how to access the Rdb database and `target.*` how to access the Mimer SQL database. How these should be configured depends on where you run the data migration step (i.e . loading of data). The `target.user` and `target.password` must be the same as you use in the `@load_mimer` command below.
+When the default direct data migration is used, a property file `CONF` directory is used to configure the source and target database. The file should be named as
+`<schema>.properties`. See below for a description about `<schema>`. An example `jdbc.properties` is included. Edit this file to specify `source.driver`, `source.url`, `source.username`, `source.password`, `target.url`, `target.user`, and `target.password` where `source.*` configures how to access the Rdb database and `target.*` how to access the Mimer SQL database. How these should be configured depends on where you run the data migration step (i.e . loading of data). The `target.user` and `target.password` must be the same as you use in the `@load_mimer` command below.
 This step can be skipped if file based migration is used, see below for more information. See "readme_mimerjmigrate.md" for more information.
 
 The OpenJDK 8 Java runtime environmnet must be installed.

@@ -32,6 +32,7 @@ MimerJMigrate migrates databases to Mimer SQL from any JDBC-accessible source. I
    ```
    @<rdb-jdbc-path>RDBJDBC_STARTUP.COM
    ```
+
 ## Installation
 
 Download `mimerjmigrate.jar`.
@@ -84,12 +85,16 @@ timing=true
 | `source.url` | JDBC URL for source database | (required) |
 | `source.username` | Source database username (empty for OS auth) | |
 | `source.password` | Source database password | |
+| `source.readonly` | Set source connection to read-only. Set to `false` for databases that don't support it (e.g. DuckDB). | true |
 | `target.url` | JDBC URL for Mimer SQL target | (required) |
 | `target.username` | Mimer SQL username | (required) |
 | `target.password` | Mimer SQL password | (required) |
 | `target.mimerload` | Use LOAD mode for bulk inserts | true |
+| `target.autocommit` | Use auto-commit on target connection | false |
 | `batch.size` | Number of rows per batch insert | 1000 |
 | `fetch.size` | Rows fetched from source per round-trip | 1000 |
+| `threads` | Number of tables to load concurrently. Can be overridden by `-threads` on the command line. | 1 |
+| `varchar.default.length` | Default length for VARCHAR/NVARCHAR columns with no length specified in the source (e.g. DuckDB). | 256 |
 | `verbose` | Show progress information | false |
 | `debug` | Show debug output | false |
 | `timing` | Show timing information | false |
@@ -105,6 +110,7 @@ If it fails, it falls back to regular LOAD mode.
 ## Usage
 
 ### Copy a Single Table
+
 Both sides must be fully qualified with schema and table name:
 
 ```
@@ -127,7 +133,6 @@ DEPARTMENTS
 JOBS
 ```
 
-
 Run with:
 ```
 java MimerJMigrate -f tablefile.txt -c jdbc.properties
@@ -140,6 +145,7 @@ Use `-t` to specify a target schema. All tables will be placed in that schema on
 ```
 java MimerJMigrate -f tablefile.txt -t MF_PERSONNEL -c jdbc.properties
 ```
+
 ### Migrate a Full Schema
 
 Use `-s <schema>` to enumerate all tables in a schema. Add `-schema` to also create the target
@@ -191,6 +197,7 @@ source database type:
 | Microsoft SQL Server | `sys`, `guest` |
 | PostgreSQL | `pg_catalog`, `pg_toast` |
 | IBM DB2 | `SYSIBM`, `SYSCAT`, `SYSSTAT`, `SYSPUBLIC`, `SYSIBMADM` |
+| DuckDB | `pg_catalog`, `pg_toast` |
 
 ```
 java MimerJMigrate -schema -c jdbc.properties
@@ -246,12 +253,16 @@ java MimerJMigrate -s MF_PERSONNEL -c jdbc.properties
 | `-s <schema\|table>` | Source schema name(s) or `schema.table` (single mode). Comma-separated or repeated for multiple schemas. Omit with `-schema`/`-schema-only` to migrate all schemas. |
 | `-x <schema>` | Exclude schema(s) when enumerating all schemas. Comma-separated or repeated. |
 | `-t <schema\|table>` | Target table (single mode) or target schema (enumerate mode, optional). Ignored when migrating multiple schemas. |
-| `-f <file>` | File containing table names, one per line |
-| `-c <file>` | Configuration/properties file (default: jdbc.properties) |
-| `-u <user>` | Target database username (overrides config file) |
-| `-p <pass>` | Target database password (overrides config file) |
-| `-schema` | Enable schema migration (create tables, sequences, FKs, indexes) |
-| `-schema-only` | Create schema only, skip data copy (implies `-schema`) |
+| `-f <file>` | File containing table names, one per line. |
+| `-c <file>` | Configuration/properties file (default: `jdbc.properties`). |
+| `-u <user>` | Target database username (overrides config file). |
+| `-p <pass>` | Target database password (overrides config file). |
+| `-schema` | Enable schema migration (create tables, sequences, FKs, indexes). |
+| `-schema-only` | Create schema only, skip data copy (implies `-schema`). |
+| `-dry-run` | List schemas and tables that would be migrated, then exit. With `verbose=true`, DDL is also printed. |
+| `-no-sort` | Skip FK dependency sort. Only valid with `-f`. Use when the file is already ordered or FK dependencies are circular. |
+| `-threads <n>` | Number of tables to load concurrently. Overrides the `threads` property. |
+| `-log [file]` | Write a log file. If no filename is given, a timestamped name is used (`mimerjmigrate_yyyy-MM-dd_HH-mm-ss.log`). |
 
 ## Table Name Formats
 
@@ -262,8 +273,6 @@ MimerJMigrate supports various table name formats:
 - `CATALOG.SCHEMA.TABLE` - Fully qualified name
 
 Catalog and schema are concatenated with underscore (e.g., `CATALOG.SCHEMA.TABLE` becomes `CATALOG_SCHEMA.TABLE`).
-
-
 
 ## Example: Migrate the Rdb MF_PERSONNEL example database
 
@@ -319,4 +328,3 @@ If the target tables already exist (e.g., created by `-schema-only` or a separat
    ```
    java MimerJMigrate -f tables.txt -c jdbc.properties
    ```
-
