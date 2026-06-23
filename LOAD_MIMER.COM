@@ -423,28 +423,29 @@ $           WRITE SYS$OUTPUT "Make sure to use the same database in target.url a
 $           WRITE SYS$OUTPUT "##################"
 $   ENDIF
 $ ENDIF
-$ MIMINFO/VERSION
 $ SET NOON
 $ DEF/USER SYS$ERROR NL:
 $ DEF/USER SYS$OUTPUT NL:
 $ MIMCONTROL/STATUS/DCL
+$ SET ON
 $ IF F$TYPE(MIMER_STATUS) .EQS. ""
 $ THEN
 $   GOTO MIMCONTROL_ERR
 $ ENDIF
-$ ON ERROR THEN GOTO MIMCONTROL_ERR
 $ IF F$ELEMENT(0,",",MIMER_STATUS) .NES. "Running"
 $ THEN
 $   WRITE SYS$OUTPUT "Mimer SQL is not running"
 $   GOTO EXIT_ERR
 $ ENDIF
-$ SET ON
+$ GOTO MIMCONTROL_OK
 $
 $ MIMCONTROL_ERR:
 $ WRITE SYS$OUTPUT "Note: Could not get status of the Mimer SQL server"
 $ WRITE SYS$OUTPUT "If it is a remote server this is expected"
 $
+$ MIMCONTROL_OK:
 $ WRITE SYS$OUTPUT "Mimer SQL environment is ok"
+$ MIMINFO/VERSION
 $ WRITE SYS$OUTPUT ""
 $ EXIT 1
 $!
