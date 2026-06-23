@@ -79,7 +79,8 @@ When the unload operation is finished, the migration and loading of the schema a
 
 
 For the specified Mimer SQL user, a schema will be created, and all database objects will be created within that schema. Multiple Rdb databases can be unloaded and loaded using the same Mimer SQL user but with different schema names. The schema corresponds to the name given by the “declare alias” statement used with the Rdb database.
-To handle objects that need to be manually migrated or to execute other custom SQL, the load_mimer.com script will look for sql files in `[.extra_sql]`. This can be used, for example, to create triggers that could not be automatically converted to Mimer SQL. There are different files for different stages of the migration:
+
+To handle objects that need to be manually migrated or to execute other custom SQL, the load_mimer.com script will look for sql files in `[.extra_sql]`. This can be used, for example, to create triggers that could not be automatically converted to Mimer SQL or to drop constraints you don't want active during the load. There are different files for different stages of the migration:
 
 - [.extra_sql]<schema>-SYSTEM-AFTER-CREATE.SQL
   - Executed as SYSADM after the schema is created. This can be for example changing the size of a databank.
@@ -105,7 +106,7 @@ The `load_mimer.com` script will perform the following steps when running in def
 9. If [.extra_sql]<schema >-after-load.sql exists, execute it to run custom SQL, such as creating manually converted triggers.
 10. Update database statistics for the Mimer SQL database to ensure efficient query execution.
 
-The entire migration can be performed on a single machine that has both Mimer SQL and Rdb installed, or it can be done on separate machines. If using separate machines, run `unload_rdb.com` on the machine with Rdb, transfer the entire directory to the machine with Mimer SQL installed, and then run `load_mimer.com`. Alternatively, if the DCL scripts are on the target machine, transfer only the `[.unload_data]` directory from the source machine to the target machine before running `load_mimer.com`.
+The entire migration can be performed on a single machine that has both Mimer SQL and Rdb installed, or it can be done on separate machines. If using separate machines, run `unload_rdb.com` on the machine with Rdb, transfer the entire directory to the machine with Mimer SQL installed, and then run `load_mimer.com`. The target Mimer SQL database can also be a remote server. This way you can for example run the entire migration from the source machine and create the schema and load the data directly into a Mimer SQL database located on a different machine. This way can move from Rdb on IA64 to Mimer SQL on x86 without moving any files.
 
 Using the `operation` parameter with `load_mimer.com`it is possible to divide the migration steps into different part and only run the translation, creation, and optimization or loading of data seperately. This is usefull for example to experiment with the schema creation and optimize it before loading data. The default is to run all steps (the same as specifying ALL). Valid operations are:
 

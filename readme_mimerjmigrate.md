@@ -15,6 +15,15 @@ MimerJMigrate migrates databases to Mimer SQL from any JDBC-accessible source. I
 - Progress reporting with row counts and timing
 - Skips rows that fail (e.g., constraint violations) and continues
 
+## Limitations
+
+The schema migration is more limited than extracting the schemas and running the Mimer SQL Translator since not all information is available. For example:
+
+- Will not migrate triggers, procedures, or views
+- Information about datatypes, foreign keys, and indexes are limited to what JDBC metadata can reveal
+
+When migrating from a database that the Mimer SQL Translator support, i.e Oracle Rdb, extract the schena from the source database and run the Mimer SQL Translatorn and then load the data using this tool.
+
 ## Prerequisites
 
 - Java 8 or later
