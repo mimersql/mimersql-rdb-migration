@@ -313,36 +313,87 @@ $   WRITE SYS$OUTPUT "MIMER_DATABASE not defined"
 $   GOTO EXIT_ERR
 $ ENDIF
 $ WRITE SYS$OUTPUT "Using Mimer SQL database ''F$TRNLNM("MIMER_DATABASE")'. Mimer SQL version information:"
-$! Check if we use JDBC load and in that case check the target.url
+$! Check JDBC environment if JDBC load is used (not RMULOAD or CONTINUE_RMULOAD)
 $ IF USE_JDBC .EQS. "YES"
 $ THEN
-$!  Set JAVA$CLASSPATH if not set
+$   CLASSPATH_ERR = 0
 $   IF ''F$TRNLNM("JAVA$CLASSPATH")' .EQS. ""
 $   THEN
+$!      JAVA$CLASSPATH not set — define it from the known default locations
 $       WRITE SYS$OUTPUT "JAVA$CLASSPATH not defined, using default settings"
 $       IF ''F$TRNLNM("RDB$JDBC_HOME")' .EQS. ""
 $       THEN
 $           WRITE SYS$OUTPUT "Rdb JDBC home not defined in RDB$JDBC_HOME, cannot set JAVA$CLASSPATH for JDBC load"
+$           CLASSPATH_ERR = 1
 $           GOTO EXIT_ERR
 $       ENDIF
 $       DEFINE JAVA$CLASSPATH MIMER$LIB:MIMJDBC3.JAR, RDB$JDBC_HOME:RDBNATIVEV8.JAR, SYS$DISK:[]MIMERJMIGRATE.JAR
 $   ELSE
-$       WRITE SYS$OUTPUT "Using JAVA$CLASSPATH: ''F$TRNLNM("JAVA$CLASSPATH")'"
+$!      JAVA$CLASSPATH is already defined — verify the required JARs are present
+$       HAS_MIMER_JDBC = 0
+$       HAS_MIMER_MIGRATE = 0
+$       HAS_RDB_JDBC = 0
+$       CP_INDEX = 0
+$       WRITE SYS$OUTPUT "Using JAVA$CLASSPATH:"
+$   CP_CHECK_LOOP:
+$       CP_ELEM = F$TRNLNM("JAVA$CLASSPATH",,CP_INDEX)
+$       IF CP_ELEM .EQS. "" THEN GOTO CP_CHECK_DONE
+$       WRITE SYS$OUTPUT "  ''CP_ELEM'"
+$       IF F$LOCATE("MIMJDBC3",  F$EDIT(CP_ELEM,"UPCASE")) .LT. F$LENGTH(CP_ELEM) THEN HAS_MIMER_JDBC = 1
+$       IF F$LOCATE("MIMERJMIGRATE", F$EDIT(CP_ELEM,"UPCASE")) .LT. F$LENGTH(CP_ELEM) THEN HAS_MIMER_MIGRATE = 1
+$       IF F$LOCATE("RDBNATIV", F$EDIT(CP_ELEM,"UPCASE")) .LT. F$LENGTH(CP_ELEM) THEN HAS_RDB_JDBC = 1
+$       CP_INDEX = CP_INDEX + 1
+$       GOTO CP_CHECK_LOOP
+$   CP_CHECK_DONE:
+$       CP_ERR = 0
+$       IF HAS_MIMER_JDBC .EQ. 0
+$       THEN
+$           WRITE SYS$OUTPUT "Error: Mimer JDBC driver (MIMJDBC3.JAR) not found in JAVA$CLASSPATH"
+$           CP_ERR = 1
+$       ENDIF
+$       IF HAS_MIMER_MIGRATE .EQ. 0
+$       THEN
+$           WRITE SYS$OUTPUT "Error: MIMERJMIGRATE.JAR not found in JAVA$CLASSPATH"
+$           CP_ERR = 1
+$       ENDIF
+$       IF HAS_RDB_JDBC .EQ. 0
+$       THEN
+$           WRITE SYS$OUTPUT "Warning: Rdb JDBC driver not found in JAVA$CLASSPATH"
+$           WRITE SYS$OUTPUT "Warning: Make sure a compatible JDBC driver for the source database is included, for example RDBNATIVEV8.JAR"
+$       ENDIF
+$       IF CP_ERR .EQ. 1
+$       THEN
+$           WRITE SYS$OUTPUT "Please set JAVA$CLASSPATH to include MIMJDBC3.JAR (MIMER$LIB:MIMJDBC3.JAR), MIMERJMIGRATE.JAR and a JDBC driver for the source database"
+$           GOTO EXIT_ERR
+$       ENDIF
 $   ENDIF
 $!  Get target.url from property file specified in [.CONF]'SCHEMA'.properties
 $   temp_file = "SYS$SCRATCH:search_result_" + F$GETJPI("", "PID") + ".tmp"
 $   SEARCH [.CONF]'SCHEMA'.properties "target.url" /OUTPUT='temp_file'
 $
-$   ! Read the result from the search of [.CONF]'SCHEMA'.properties
+$   ! Read result, skipping comment lines (lines where the first non-space character is #)
 $   OPEN/READ INFILE 'temp_file'
-$   READ INFILE line
+$   line = ""
+$ FIND_TARGET_URL:
+$   READ/END_OF_FILE=TARGET_URL_DONE INFILE raw_line
+$   trimmed = F$EDIT(raw_line, "TRIM")
+$   IF F$EXTRACT(0, 1, trimmed) .EQS. "#" THEN GOTO FIND_TARGET_URL
+$   IF trimmed .EQS. "" THEN GOTO FIND_TARGET_URL
+$   line = trimmed
+$ TARGET_URL_DONE:
 $   CLOSE INFILE
 $   DELETE 'temp_file';*
-$ 
+$
+$   IF line .EQS. ""
+$   THEN
+$       WRITE SYS$OUTPUT "Could not find a non-commented target.url in [.CONF]''SCHEMA'.properties"
+$       GOTO EXIT_ERR
+$   ENDIF
+$
 $   ! Extract value after "=" in target.url
 $   eq_pos = F$LOCATE("=", line)
 $   target_url = F$EXTRACT(eq_pos + 1, 999, line)
-$ 
+$
 $   WRITE SYS$OUTPUT "Target URL in [.CONF]'SCHEMA'.properties: ", target_url
 $
 $!  Extract the database name from target.url (part after last "/" or ":")
