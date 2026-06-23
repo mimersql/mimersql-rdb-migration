@@ -20,13 +20,20 @@ all: doc
 $(T_DIR)/readme.%: $(SRC)/readme.md | $(T_DIR)
 	pandoc --pdf-engine=xelatex $< -o $@
 
+$(T_DIR)/readme_mimerjmigrate.%: $(SRC)/readme_mimerjmigrate.md | $(T_DIR)
+	pandoc --pdf-engine=xelatex $< -o $@
+
 $(T_DIR)/readme.txt: $(SRC)/readme.md | $(T_DIR)
 	pandoc $< -o $@
 	@$(SED_CMD) 's/\\\[/\[/g' $(T_DIR)/readme.txt
 	@$(SED_CMD)"" 's/\\\]/\]/g' $(T_DIR)/readme.txt
 
+$(T_DIR)/readme_mimerjmigrate.txt: $(SRC)/readme_mimerjmigrate.md | $(T_DIR)
+	pandoc $< -o $@
+	@$(SED_CMD) 's/\\\[/\[/g' $(T_DIR)/readme_mimerjmigrate.txt
+	@$(SED_CMD)"" 's/\\\]/\]/g' $(T_DIR)/readme_mimerjmigrate.txt
 
-doc: $(T_DIR)/readme.txt $(T_DIR)/readme.html $(T_DIR)/readme.docx $(T_DIR)/readme.pdf | $(T_DIR)
+doc: $(T_DIR)/readme.txt $(T_DIR)/readme.html $(T_DIR)/readme.docx $(T_DIR)/readme.pdf $(T_DIR)/readme_mimerjmigrate.txt $(T_DIR)/readme_mimerjmigrate.pdf $(T_DIR)/readme_mimerjmigrate.docx $(T_DIR)/readme_mimerjmigrate.html
 
 $(T_DIR):
 	mkdir -p $(T_DIR)
