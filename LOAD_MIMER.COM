@@ -394,7 +394,7 @@ $   ! Extract value after "=" in target.url
 $   eq_pos = F$LOCATE("=", line)
 $   target_url = F$EXTRACT(eq_pos + 1, 999, line)
 $
-$   WRITE SYS$OUTPUT "Target URL in [.CONF]'SCHEMA'.properties: ", target_url
+$   WRITE SYS$OUTPUT "Target URL in [.CONF]''SCHEMA'.properties: ", target_url
 $
 $!  Extract the database name from target.url (part after last "/" or ":")
 $!  Determine delimiter: use "/" if present, otherwise ":"
