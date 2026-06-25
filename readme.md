@@ -70,7 +70,7 @@ When the unload operation is finished, the migration and loading of the schema a
 ```
 
 - `<SYSADM password>` can be an empty string, in which case you will be prompted for the password.
-- `<schema>` should be the same as `<name of database>` in the unload step.
+- `<schema>` should be the same as `<schema>` in the unload step.
 - `<Mimer SQL user>` is a database user that will be created if it does not exist. If left out, a default user called "mimeruser" is used.
 - `<Mimer SQL password>` is the password for `<Mimer SQL user>`
 - `operation`: If specified only do part of the migration and valid values are ALL, CREATE, LOAD, RMULOAD, CONTINUE_LOAD, CONTINUE_RMULOAD
