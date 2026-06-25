@@ -116,7 +116,7 @@ $ OS_USER = "'" + f$edit(f$getjpi("","USERNAME"),"TRIM") + "'"
 $ OPEN/WRITE OUTFILE [.GEN_SQL]CREATE_USERS_'SCHEMA'.SQL
 $ WRITE OUTFILE "log input,output on '[.LOG]CREATE_USERS_''SCHEMA'.LOG';"
 $ WRITE OUTFILE "WHENEVER ERROR CONTINUE;"
-$ WRITE OUTFILE "create ident ''MIMER_USER' as user identified by '" + MIMER_PASS +"';"
+$ WRITE OUTFILE "create ident ''MIMER_USER' as user identified by '" + MIMER_PASS +"' without schema;"
 $ WRITE OUTFILE "drop databank ''SCHEMA'_DB cascade;"
 $ WRITE OUTFILE "alter ident ''MIMER_USER' add os_user ''OS_USER';"
 $ WRITE OUTFILE "WHENEVER ERROR EXIT;"
