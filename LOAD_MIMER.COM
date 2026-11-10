@@ -120,7 +120,7 @@ $ WRITE OUTFILE "create ident ''MIMER_USER' as user identified by '" + MIMER_PAS
 $ WRITE OUTFILE "drop databank ''SCHEMA'_DB cascade;"
 $ WRITE OUTFILE "alter ident ''MIMER_USER' add os_user ''OS_USER';"
 $ WRITE OUTFILE "WHENEVER ERROR EXIT;"
-$ WRITE OUTFILE "create databank ''SCHEMA'_DB IN '" + DATABANK_FILE +"';"
+$ WRITE OUTFILE "create databank ''SCHEMA'_DB set file '" + DATABANK_FILE +"', option LOG;"
 $ WRITE OUTFILE "grant schema to ''MIMER_USER';"
 $ WRITE OUTFILE "grant table on ''SCHEMA'_DB to ''MIMER_USER';"
 $ WRITE OUTFILE "grant sequence on ''SCHEMA'_DB to ''MIMER_USER';"
@@ -215,6 +215,8 @@ $ IF TMP .NES. "" THEN DELETE [.LOG]'SCHEMA'-GET-TABLES.LOG;*
 $ define/user sys$output [.LOG]'SCHEMA'-GET-TABLES.LOG
 $ bsql/username=SYSADM/password="''SYSPASS'"/query="read '[.GEN_SQL]GET_TABLES_''SCHEMA'.SQL'"
 $ CONTINUE_LOAD:
+$ WRITE SYS$OUTPUT "Setting TRANSACTION option on databank ''SCHEMA'_DB"
+$ bsql/username=SYSADM/password="''SYSPASS'"/query="alter databank ''SCHEMA'_DB set option transaction"
 $! Run any extra SQL before loading data
 $ TMP = F$SEARCH("[.EXTRA_SQL]''SCHEMA'-BEFORE-LOAD.SQL")
 $ IF TMP .NES. ""
@@ -298,6 +300,8 @@ $     CLOSE OUTFILE
 $     define/user sys$output [.LOG]'SCHEMA'-AFTER-LOAD-OUTPUT.LOG
 $     bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="read '[.GEN_SQL]''SCHEMA'-AFTER-LOAD-SQL.SQL'"
 $ ENDIF
+$ WRITE SYS$OUTPUT "Setting LOG option on databank ''SCHEMA'_DB"
+$ bsql/username=SYSADM/password="''SYSPASS'"/query="alter databank ''SCHEMA'_DB set option log"
 $ WRITE SYS$OUTPUT "Updating statistics"
 $ bsql/username=SYSADM/password="''SYSPASS'"/query="update statistics for ident SYSTEM"
 $ bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="update statistics for schema ''SCHEMA'"
