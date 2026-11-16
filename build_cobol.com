@@ -2,7 +2,6 @@ $! Run SQL Translator, Embedded SQL pre-processor, and build the Cobol programs
 $! The SQL Translator will convert the Rdb .SCO files to Mimer SQL .ECO files
 $! The .ECO files will be the new main source where further development will be done
 $! If no program name is give as the first parameter, build all files
-$ DEFINE PGCOCA$LIB "SYS$DISK:[]"
 $ BUILD_DIR = "[.build]"
 $ NEW_SRC_DIR = "[.new_source]"
 $ WRITE SYS$OUTPUT "Convert, compile and link Cobol programs"
