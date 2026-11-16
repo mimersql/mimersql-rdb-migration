@@ -1,5 +1,5 @@
 IDENTIFICATION DIVISION.
-PROGRAM-ID. DEMO_STD.
+PROGRAM-ID. DEMO.
 *
 *   Embedded SQL COBOL demo.
 *   Creates the table TAB1, inserts a few rows, selects them
@@ -146,4 +146,4 @@ SQL-ERROR.
     EXEC SQL ROLLBACK END-EXEC.
     STOP RUN.
 
-END PROGRAM DEMO_STD.
+END PROGRAM DEMO.
