@@ -1,0 +1,149 @@
+IDENTIFICATION DIVISION.
+PROGRAM-ID. DEMO_STD.
+*
+*   Embedded SQL COBOL demo.
+*   Creates the table TAB1, inserts a few rows, selects them
+*   and prints the result.
+*   Errors are reported with SQLCODE only.
+*
+
+DATA DIVISION.
+WORKING-STORAGE SECTION.
+ EXEC SQL BEGIN DECLARE SECTION END-EXEC.
+ 01 SQLCODE               PIC S9(9) COMP.
+ 01 TAB1-ID               PIC S9(9) COMP.
+ 01 TAB1-NAME             PIC X(20).
+ 01 TAB1-AMOUNT           PIC S9(9) COMP.
+ EXEC SQL END DECLARE SECTION END-EXEC.
+
+ 01 SQLCODE-DISPLAY       PIC -(9)9.
+ 01 ROW-COUNT             PIC S9(9) COMP VALUE 0.
+
+ 01 RESULT-LINE.
+    05 RES-ID             PIC Z(8)9.
+    05 FILLER             PIC X(2) VALUE SPACES.
+    05 RES-NAME           PIC X(20).
+    05 FILLER             PIC X(2) VALUE SPACES.
+    05 RES-AMOUNT         PIC -(8)9.
+ 01 ROW-COUNT-DISPLAY     PIC Z(8)9.
+
+ EXEC SQL
+     DECLARE TAB1_CURSOR CURSOR FOR
+         SELECT ID, NAME, AMOUNT
+         FROM TAB1
+         ORDER BY ID
+ END-EXEC.
+
+PROCEDURE DIVISION.
+MAIN SECTION.
+
+MAIN-PROGRAM.
+    PERFORM CONNECT-DATABASE.
+    PERFORM DROP-TABLE.
+    PERFORM CREATE-TABLE.
+    PERFORM INSERT-ROWS.
+    PERFORM LIST-ROWS.
+    PERFORM DISCONNECT-DATABASE.
+    STOP RUN.
+
+CONNECT-DATABASE.
+    DISPLAY "Connecting".
+    EXEC SQL INCLUDE MIMER_CONNECT.INC END-EXEC.
+
+DROP-TABLE.
+*   Any error is ignored here. If the table does not exist that is
+*   expected, and any other problem will be reported by CREATE TABLE.
+    DISPLAY "Dropping table TAB1 if it exists".
+    EXEC SQL DROP TABLE TAB1 END-EXEC.
+    IF SQLCODE = 0
+        EXEC SQL COMMIT END-EXEC
+    ELSE
+        EXEC SQL ROLLBACK END-EXEC
+    END-IF.
+
+CREATE-TABLE.
+    DISPLAY "Creating table TAB1".
+    EXEC SQL
+        CREATE TABLE TAB1 (
+            ID      INTEGER NOT NULL PRIMARY KEY,
+            NAME    CHAR(20),
+            AMOUNT  INTEGER)
+    END-EXEC.
+    IF SQLCODE NOT = 0
+        PERFORM SQL-ERROR
+    END-IF.
+    EXEC SQL COMMIT END-EXEC.
+
+INSERT-ROWS.
+    DISPLAY "Inserting rows".
+    MOVE 1 TO TAB1-ID.
+    MOVE "Apple" TO TAB1-NAME.
+    MOVE 120 TO TAB1-AMOUNT.
+    PERFORM INSERT-ONE-ROW.
+
+    MOVE 2 TO TAB1-ID.
+    MOVE "Banana" TO TAB1-NAME.
+    MOVE 75 TO TAB1-AMOUNT.
+    PERFORM INSERT-ONE-ROW.
+
+    MOVE 3 TO TAB1-ID.
+    MOVE "Cherry" TO TAB1-NAME.
+    MOVE -10 TO TAB1-AMOUNT.
+    PERFORM INSERT-ONE-ROW.
+
+    EXEC SQL COMMIT END-EXEC.
+
+INSERT-ONE-ROW.
+    EXEC SQL
+        INSERT INTO TAB1 (ID, NAME, AMOUNT)
+        VALUES (:TAB1-ID, :TAB1-NAME, :TAB1-AMOUNT)
+    END-EXEC.
+    IF SQLCODE NOT = 0
+        PERFORM SQL-ERROR
+    END-IF.
+
+LIST-ROWS.
+    DISPLAY "Selecting rows from TAB1".
+    DISPLAY " ".
+    DISPLAY "       ID  NAME                     AMOUNT".
+    DISPLAY "---------  --------------------  ---------".
+    EXEC SQL OPEN TAB1_CURSOR END-EXEC.
+    IF SQLCODE NOT = 0
+        PERFORM SQL-ERROR
+    END-IF.
+
+    PERFORM UNTIL SQLCODE = 100
+        EXEC SQL
+            FETCH TAB1_CURSOR INTO :TAB1-ID, :TAB1-NAME, :TAB1-AMOUNT
+        END-EXEC
+        EVALUATE SQLCODE
+            WHEN 0
+                ADD 1 TO ROW-COUNT
+                MOVE TAB1-ID TO RES-ID
+                MOVE TAB1-NAME TO RES-NAME
+                MOVE TAB1-AMOUNT TO RES-AMOUNT
+                DISPLAY RESULT-LINE
+            WHEN 100
+                CONTINUE
+            WHEN OTHER
+                PERFORM SQL-ERROR
+        END-EVALUATE
+    END-PERFORM.
+
+    EXEC SQL CLOSE TAB1_CURSOR END-EXEC.
+    EXEC SQL COMMIT END-EXEC.
+    MOVE ROW-COUNT TO ROW-COUNT-DISPLAY.
+    DISPLAY " ".
+    DISPLAY ROW-COUNT-DISPLAY " rows selected".
+
+DISCONNECT-DATABASE.
+    DISPLAY "Disconnecting".
+    EXEC SQL DISCONNECT ALL END-EXEC.
+
+SQL-ERROR.
+    MOVE SQLCODE TO SQLCODE-DISPLAY.
+    DISPLAY "Error: SQLCODE = " SQLCODE-DISPLAY.
+    EXEC SQL ROLLBACK END-EXEC.
+    STOP RUN.
+
+END PROGRAM DEMO_STD.
