@@ -1,7 +1,7 @@
 $! Run SQL Translator, Embedded SQL pre-processor, and build the Fortran programs
 $! The SQL Translator will convert the Rdb .SFO files to Mimer SQL .EFO files
 $! The .EFO files will be the new main source where further development will be done
-$! If no program name is give as the first parameter, build all files
+$! The first parameter is a comma separated list of programs to build, without file extension
 $ BUILD_DIR = "[.build]"
 $ NEW_SRC_DIR = "[.new_source]"
 $ WRITE SYS$OUTPUT "Convert, compile and link Fortran programs"
@@ -26,7 +26,7 @@ $! Set debug mode
 $ IF  P2 .eqs. "DEBUG"
 $ THEN
 $   WRITE SYS$OUTPUT "Using debug"
-$   FORFLAG="/DEBUG=ALL/NOOPTIMIZE/"
+$   FORFLAG="/DEBUG=ALL/NOOPTIMIZE"
 $   LNKFLAG="DEBUG/"
 $ ELSE
 $   LNKFLAG=""

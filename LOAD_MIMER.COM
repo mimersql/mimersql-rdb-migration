@@ -4,7 +4,6 @@ $ MIMER_USER = "mimeruser"
 $ MIMER_PASS = "gB7Xd92jLmWZ"
 $ SYSPASS=""
 $ OPERATION="ALL"
-$ CLEAN="NO"
 $ LOAD_LOG_STDERR="YES"
 $ DATABANK_FILE=""
 $ USE_JDBC="YES"
@@ -37,11 +36,8 @@ $   THEN
 $   WRITE SYS$OUTPUT "Setting operation to ''P5'"
 $   OPERATION="''P5'"
 $ ENDIF
-$ IF  P6 .eqs. "DELETE"
-$   THEN CLEAN="YES"
-$ ENDIF
-$ IF  P7 .nes. ""
-$   THEN DATABANK_FILE="''P7'"
+$ IF  P6 .nes. ""
+$   THEN DATABANK_FILE="''P6'"
 $ ELSE
 $   DATABANK_FILE=''SCHEMA'_DB
 $ ENDIF
@@ -76,6 +72,8 @@ $   ENDIF
 $ ENDIF
 $ WRITE SYS$OUTPUT "Check done"
 $
+$ IF OPERATION .EQS. "CONTINUE_LOAD" THEN GOTO CONTINUE_LOAD
+$ IF OPERATION .EQS. "CONTINUE_RMULOAD" THEN GOTO CONTINUE_LOAD
 $ IF OPERATION .NES. "CREATE"
 $     THEN
 $     IF OPERATION .NES. "ALL" THEN GOTO LOAD_DATA
@@ -252,12 +250,6 @@ $   THEN
 $       TMP = F$SEARCH("[.UNLOAD_DATA]''SCHEMA'-''tab'.TXT")
 $       IF TMP .NES. ""
 $       THEN
-$           IF CLEAN .EQS. "YES"
-$           THEN
-$               write sys$output "Cleaning tab ''SCHEMA'.''tab'"
-$               define/user sys$output [.LOG]'SCHEMA'_OUTPUT.LOG
-$               bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="delete from ''SCHEMA'.''tab'"
-$           ENDIF
 $           write sys$output "Loading ''SCHEMA'.''tab'"
 $           QSCHEMA = """" + """" + SCHEMA + """" + """"
 $           QTABLE  = """" + """" + tab    + """" + """"
@@ -284,7 +276,13 @@ $ IF OPERATION .EQS. "RMULOAD" THEN GOTO LOAD_DONE
 $ IF OPERATION .EQS. "CONTINUE_RMULOAD" THEN GOTO LOAD_DONE
 $ DIRECT_LOAD:
 $ WRITE SYS$OUTPUT "Running direct load from Rdb to Mimer SQL"
-$ java "MimerJMigrate" -f [.unload_data]'SCHEMA'-TABLES-MIMER.TXT -t 'SCHEMA' -u "''MIMER_USER'" -p "''MIMER_PASS'" -c [.CONF]'SCHEMA'.properties
+$ LOG_OPT = ""
+$ IF LOAD_LOG_STDERR .NES. "YES"
+$ THEN
+$   WRITE SYS$OUTPUT "Log file for the direct load is [.LOG]''SCHEMA'-''OPERATION'.LOG"
+$   LOG_OPT = "-log [.LOG]''SCHEMA'-''OPERATION'.LOG"
+$ ENDIF
+$ java "MimerJMigrate" -f [.unload_data]'SCHEMA'-TABLES-MIMER.TXT -t 'SCHEMA' -u "''MIMER_USER'" -p "''MIMER_PASS'" -c [.CONF]'SCHEMA'.properties 'LOG_OPT'
 $ LOAD_DONE:
 $ TMP = F$SEARCH("[.EXTRA_SQL]''SCHEMA'-AFTER-LOAD.SQL")
 $ IF TMP .NES. ""
