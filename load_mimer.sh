@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # Create schemas in Mimer SQL and load data
 
 MIMER_USER="mimeruser"
@@ -64,45 +64,48 @@ rmu_load_table(){
     fi
 }
 
+# bash 3.2 on macOS does not support ${var,,} and ${var^^}
+to_lower()
+{
+    printf '%s' "$1" | tr '[:upper:]' '[:lower:]'
+}
+
+to_upper()
+{
+    printf '%s' "$1" | tr '[:lower:]' '[:upper:]'
+}
+
+# Rename the latest version of files transferred from OpenVMS (FILE.TXT;3) to the name
+# without version, and remove the older versions.
+# Written without associative arrays since bash 3.2 on macOS does not support them.
 fix_vms_names()
 {
-# Declare associative arrays for latest versions
-declare -A latest
-declare -A latest_file
-
-# List all files with version numbers
-for file in ${1}; do
-    # Extract base name (before the semicolon) and version number
-    base_name="${file%%;*}"
-    version="${file##*;}"
-    
-    # Skip files without a valid version part (e.g., FILE.TXT without ";<version>")
-    if [[ "$base_name" == "$file" ]]; then
+local file base_name version latest_version target
+for base_name in $(for file in ${1}; do
+                       case "${file}" in
+                           (*\;*) echo "${file%%;*}" ;;
+                       esac
+                   done | sort -u); do
+    latest_version=""
+    for file in "${base_name}"\;*; do
+        version="${file##*;}"
+        case "${version}" in
+            ''|*[!0-9]*) continue ;;
+        esac
+        if [ -z "${latest_version}" ] || [ "${version}" -gt "${latest_version}" ]; then
+            latest_version=${version}
+        fi
+    done
+    if [ -z "${latest_version}" ]; then
         continue
     fi
-    
-    # Check if version is numeric
-    if [[ "$version" =~ ^[0-9]+$ ]]; then
-        #echo "base_name: ${base_name}, version=${version}"
-        # Store the latest version for each base name
-        if [[ ! -v latest["${base_name}"] || ${version} -gt ${latest["${base_name}"]} ]]; then
-            latest["$base_name"]=$version
-            latest_file["$base_name"]=$file
-        fi
-    fi
-done
-
-# Process the latest files
-for base_name in "${!latest_file[@]}"; do
-    latest_version_file="${latest_file[$base_name]}"
-    # Rename the latest version to the base name
     # Check if there is a version using lower case, and use that if so
-    if [ -e ${base_name,,} ]; then
-        mv "$latest_version_file" "${base_name,,}"
-    else
-        mv "$latest_version_file" "$base_name"
+    target=$(to_lower "${base_name}")
+    if [ ! -e "${target}" ]; then
+        target=${base_name}
     fi
-    rm -f ${base_name}\;*
+    mv "${base_name};${latest_version}" "${target}"
+    rm -f "${base_name}"\;*
 done
 }
 
@@ -143,7 +146,7 @@ check_mimer()
             else
                 db_name="${target_url##*:}"
             fi
-            if [ -n "${db_name}" ] && ! [[ "${db_name,,}" = "${MIMER_DATABASE,,}" ]]; then
+            if [ -n "${db_name}" ] && [ "$(to_lower "${db_name}")" != "$(to_lower "${MIMER_DATABASE}")" ]; then
                 echo "##################"
                 echo "Warning: The database name in target.url (${db_name}) is not the same as MIMER_DATABASE (${MIMER_DATABASE})."
                 echo "Make sure to use the same database in target.url as the database in MIMER_DATABASE."
@@ -166,10 +169,10 @@ do
              SYSADM_PASS=${OPTARG}
              ;;
          's')
-             SCHEMA=${OPTARG^^}
+             SCHEMA=$(to_upper "${OPTARG}")
              ;;
          'o')
-             OPERATION=${OPTARG^^}
+             OPERATION=$(to_upper "${OPTARG}")
              ;;
          'u')
              MIMER_USER=${OPTARG}
@@ -181,7 +184,7 @@ do
             DELETE="YES"
              ;;
          'e')
-            ENCODING=${OPTARG,,}
+            ENCODING=$(to_lower "${OPTARG}")
              ;;
          't')
             TABLE=${OPTARG}
@@ -207,7 +210,7 @@ fi
 if [ "${SCHEMA}" = "" ]; then
     echo "Enter schema: "
     read SCHEMA
-    SCHEMA=${SCHEMA^^}
+    SCHEMA=$(to_upper "${SCHEMA}")
 fi
 
 if [ "${DATABANK_FILE}" = "" ]; then
