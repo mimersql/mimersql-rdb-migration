@@ -126,13 +126,36 @@ $ WRITE OUTFILE "EXIT;"
 $ CLOSE OUTFILE
 $ define/user sys$output [.LOG]'SCHEMA'_OUTPUT.LOG
 $ bsql/username=SYSADM/password="''SYSPASS'"/query="read '[.GEN_SQL]CREATE_USERS_''SCHEMA'.SQL'"
-$ WRITE SYS$OUTPUT "Creating ''SCHEMA' schema, log result to [.LOG]CREATE_SCHEMA_''SCHEMA'.LOG"
-$ OPEN/WRITE OUTFILE [.GEN_SQL]create_schema_'SCHEMA'.SQL
-$ WRITE OUTFILE "log input,output on '[.LOG]CREATE_SCHEMA_''SCHEMA'.LOG';"
+$! Create the database schema name in a separate step so we can read potential extra SQL before creating the complete schema
+$ WRITE SYS$OUTPUT "Creating ''SCHEMA' schema name, log result to [.LOG]CREATE_SCHEMA_NAME_''SCHEMA'.LOG"
+$ OPEN/WRITE OUTFILE [.GEN_SQL]create_schema_name_'SCHEMA'.SQL
+$ WRITE OUTFILE "log input,output on '[.LOG]CREATE_SCHEMA_NAME_''SCHEMA'.LOG';"
 $ WRITE OUTFILE "WHENEVER ERROR CONTINUE;"
 $ WRITE OUTFILE "drop schema ''SCHEMA' cascade;"
 $ WRITE OUTFILE "WHENEVER ERROR EXIT;"
 $ WRITE OUTFILE "create schema ''SCHEMA';"
+$ WRITE OUTFILE "EXIT;"
+$ CLOSE OUTFILE
+$ define/user sys$output [.LOG]'SCHEMA'_NAME_OUTPUT.LOG
+$ bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="read '[.GEN_SQL]CREATE_SCHEMA_NAME_''SCHEMA'.SQL'"
+$
+$ TMP = F$SEARCH("[.EXTRA_SQL]''SCHEMA'-BEFORE-CREATE.SQL")
+$ IF TMP .NES. ""
+$ THEN
+$     WRITE SYS$OUTPUT "Executing extra SQL before creating schema in [.EXTRA_SQL]''SCHEMA'-BEFORE-CREATE.SQL"
+$     WRITE SYS$OUTPUT "Log operations to [.LOG]''SCHEMA'-BEFORE-CREATE-SQL.LOG"
+$     OPEN/WRITE OUTFILE [.GEN_SQL]'SCHEMA'-BEFORE-CREATE-SQL.SQL
+$     WRITE OUTFILE "log input,output on '[.LOG]" + SCHEMA + "-BEFORE-CREATE-SQL.LOG';"
+$     WRITE OUTFILE "set output off;"
+$     WRITE OUTFILE "set schema ''SCHEMA';"
+$     WRITE OUTFILE "read '[.EXTRA_SQL]" + "''SCHEMA'-BEFORE-CREATE.SQL';"
+$     CLOSE OUTFILE
+$     define/user sys$output [.LOG]'SCHEMA'-BEFORE-CREATE-OUTPUT.LOG
+$     bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="read '[.GEN_SQL]''SCHEMA'-BEFORE-CREATE-SQL.SQL'"
+$ ENDIF
+$ WRITE SYS$OUTPUT "Creating ''SCHEMA' schema, log result to [.LOG]CREATE_SCHEMA_''SCHEMA'.LOG"
+$ OPEN/WRITE OUTFILE [.GEN_SQL]create_schema_'SCHEMA'.SQL
+$ WRITE OUTFILE "log input,output on '[.LOG]CREATE_SCHEMA_''SCHEMA'.LOG';"
 $ WRITE OUTFILE "set schema ''SCHEMA';"
 $ WRITE OUTFILE "WHENEVER ERROR CONTINUE;"
 $ WRITE OUTFILE "read '[.GEN_SQL]" + SCHEMA + "-SCHEMA-MIMER.SQL';"

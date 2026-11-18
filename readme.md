@@ -88,6 +88,8 @@ For the specified Mimer SQL user, a schema will be created, and all database obj
 
 To handle objects that need to be manually migrated or to execute other custom SQL, the load_mimer.com script will look for sql files in `[.extra_sql]`. This can be used, for example, to create triggers that could not be automatically converted to Mimer SQL or to drop constraints you don't want active during the load. There are different files for different stages of the migration:
 
+- [.extra_sql]<schema>-BEFORE-CREATE.SQL
+  - Executed as the specified user after the schema name is created, but before the translated schema is read. This can be used for objects that could not be translated automatically and are used in many places later in the schema, for example domains.
 - [.extra_sql]<schema>-SYSTEM-AFTER-CREATE.SQL
   - Executed as SYSADM after the schema is created. This can be for example changing the size of a databank.
 - [.extra_sql]<schema>-AFTER-CREATE.SQL
@@ -105,15 +107,16 @@ The `load_mimer.com` script will perform the following steps when running in def
 2. Create the Mimer SQL user if it does not exist.
 3. Create a databank where database objects will be stored.
 4. Create the Mimer SQL schema for the migrated Rdb database.
-5. Execute the translated SQL schema file using Mimer SQL.
-6. Run `dbanalyzer` and apply the suggested changes on the created schema to optimize the database structure.
-7. If [.extra_sql]<schema>-after-create.sql or [.extra_sql]<schema>-system-after-create.sql exists, execute them (in that order) to run custom SQL, such as changing table or databank definitions.
-8. Set the TRANSACTION option on the databank during the load.
-9. If [.extra_sql]<schema>-before-load.sql exists, execute it, for example to drop constraints or indexes during the load.
-10. Load each table into Mimer SQL using either MimerJMigrate for direct migration or the exported data files for file based migration.
-11. If [.extra_sql]<schema>-after-load.sql exists, execute it to run custom SQL, such as creating manually converted triggers.
-12. Set the LOG option on the databank again.
-13. Update database statistics for the Mimer SQL database to ensure efficient query execution.
+5. If [.extra_sql]<schema>-before-create.sql exists, execute it to create objects that the translated schema depends on, such as domains.
+6. Execute the translated SQL schema file using Mimer SQL.
+7. Run `dbanalyzer` and apply the suggested changes on the created schema to optimize the database structure.
+8. If [.extra_sql]<schema>-after-create.sql or [.extra_sql]<schema>-system-after-create.sql exists, execute them (in that order) to run custom SQL, such as changing table or databank definitions.
+9. Set the TRANSACTION option on the databank during the load.
+10. If [.extra_sql]<schema>-before-load.sql exists, execute it, for example to drop constraints or indexes during the load.
+11. Load each table into Mimer SQL using either MimerJMigrate for direct migration or the exported data files for file based migration.
+12. If [.extra_sql]<schema>-after-load.sql exists, execute it to run custom SQL, such as creating manually converted triggers.
+13. Set the LOG option on the databank again.
+14. Update database statistics for the Mimer SQL database to ensure efficient query execution.
 
 The entire migration can be performed on a single machine that has both Mimer SQL and Rdb installed, or it can be done on separate machines. If using separate machines, run `unload_rdb.com` on the machine with Rdb, transfer the entire directory to the machine with Mimer SQL installed, and then run `load_mimer.com`. The target Mimer SQL database can also be a remote server. This way you can for example run the entire migration from the source machine and create the schema and load the data directly into a Mimer SQL database located on a different machine. This way you can move from Rdb on IA64 to Mimer SQL on x86 without moving any files.
 

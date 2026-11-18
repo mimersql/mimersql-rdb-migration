@@ -280,12 +280,29 @@ if [ "${OPERATION}" = "CREATE" -o "${OPERATION}" = "ALL" ]; then
     echo "EXIT;" >> ./GEN_SQL/CREATE_USERS_${SCHEMA}.SQL
     bsql --username=SYSADM --password=${SYSADM_PASS} --query="read './GEN_SQL/CREATE_USERS_${SCHEMA}.SQL'" ${MIMER_DATABASE} >> ./LOG/TMP_OUTPUT.LOG 2>&1
 
+    # Create the database schema name in a separate step so we can read potential extra SQL before creating the complete schema
+    echo "Creating ${SCHEMA} schema name, log result to ./LOG/CREATE_SCHEMA_NAME_${SCHEMA}.LOG"
+    echo "log input,output on './LOG/CREATE_SCHEMA_NAME_${SCHEMA}.LOG';" > ./GEN_SQL/CREATE_SCHEMA_NAME_${SCHEMA}.SQL
+    echo "WHENEVER ERROR CONTINUE;" >> ./GEN_SQL/CREATE_SCHEMA_NAME_${SCHEMA}.SQL
+    echo "drop schema ${SCHEMA} cascade;"  >> ./GEN_SQL/CREATE_SCHEMA_NAME_${SCHEMA}.SQL
+    echo "WHENEVER ERROR EXIT;"  >> ./GEN_SQL/CREATE_SCHEMA_NAME_${SCHEMA}.SQL
+    echo "create schema ${SCHEMA};"  >> ./GEN_SQL/CREATE_SCHEMA_NAME_${SCHEMA}.SQL
+    echo "EXIT;" >> ./GEN_SQL/CREATE_SCHEMA_NAME_${SCHEMA}.SQL
+    bsql --username=${MIMER_USER} --password=${MIMER_PASS} --query="read './GEN_SQL/CREATE_SCHEMA_NAME_${SCHEMA}.SQL'" ${MIMER_DATABASE} >> ./LOG/TMP_OUTPUT.LOG 2>&1
+
+    if [ -e ./EXTRA_SQL/${SCHEMA}-BEFORE-CREATE.SQL ]; then
+        echo "Executing extra SQL before creating schema in ./EXTRA_SQL/${SCHEMA}-BEFORE-CREATE.SQL"
+        echo "Log operations to ./LOG/${SCHEMA}-BEFORE-CREATE-SQL.LOG"
+        echo "log input,output on './LOG/${SCHEMA}-BEFORE-CREATE-SQL.LOG';" > ./GEN_SQL/${SCHEMA}-BEFORE-CREATE-SQL.SQL
+        echo "set output off;" >> ./GEN_SQL/${SCHEMA}-BEFORE-CREATE-SQL.SQL
+        echo "set schema ${SCHEMA};" >> ./GEN_SQL/${SCHEMA}-BEFORE-CREATE-SQL.SQL
+        echo "read './EXTRA_SQL/${SCHEMA}-BEFORE-CREATE.SQL';" >> ./GEN_SQL/${SCHEMA}-BEFORE-CREATE-SQL.SQL
+        echo "EXIT;" >> ./GEN_SQL/${SCHEMA}-BEFORE-CREATE-SQL.SQL
+        bsql --username=${MIMER_USER} --password=${MIMER_PASS} --query="read './GEN_SQL/${SCHEMA}-BEFORE-CREATE-SQL.SQL'" ${MIMER_DATABASE} >> ./LOG/TMP_OUTPUT.LOG 2>&1
+    fi
+
     echo "Creating ${SCHEMA} schema, log result to ./LOG/CREATE_SCHEMA_${SCHEMA}.LOG"
     echo "log input,output on './LOG/CREATE_SCHEMA_${SCHEMA}.LOG';" > ./GEN_SQL/CREATE_SCHEMA_${SCHEMA}.SQL
-    echo "WHENEVER ERROR CONTINUE;" >> ./GEN_SQL/CREATE_SCHEMA_${SCHEMA}.SQL
-    echo "drop schema ${SCHEMA} cascade;"  >> ./GEN_SQL/CREATE_SCHEMA_${SCHEMA}.SQL
-    echo "WHENEVER ERROR EXIT;"  >> ./GEN_SQL/CREATE_SCHEMA_${SCHEMA}.SQL
-    echo "create schema ${SCHEMA};"  >> ./GEN_SQL/CREATE_SCHEMA_${SCHEMA}.SQL
     echo "set schema ${SCHEMA};"  >> ./GEN_SQL/CREATE_SCHEMA_${SCHEMA}.SQL
     echo "WHENEVER ERROR CONTINUE;"  >> ./GEN_SQL/CREATE_SCHEMA_${SCHEMA}.SQL
     echo "read './GEN_SQL/${SCHEMA}-SCHEMA-MIMER.SQL';"  >> ./GEN_SQL/CREATE_SCHEMA_${SCHEMA}.SQL
