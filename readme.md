@@ -22,7 +22,7 @@ MIMCONTROL/START
 
 ### Java and JDBC configuration
 
-This section only applies to the default direct data migration. It can be skipped if file based migration is used, see below for more information.
+This section only applies to the default direct data migration. It can be skipped if file based migration is used, see below for more information. The Java and JDBC settings are not checked when only the `CREATE` operation is run.
 
 OpenJDK 8 or later must be installed and initialized, and the Rdb JDBC driver must be activated:
 

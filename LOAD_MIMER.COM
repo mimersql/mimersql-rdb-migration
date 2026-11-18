@@ -44,6 +44,7 @@ $ ENDIF
 $
 $ IF OPERATION .EQS. "RMULOAD" THEN USE_JDBC="NO"
 $ IF OPERATION .EQS. "CONTINUE_RMULOAD" THEN USE_JDBC="NO"
+$ IF OPERATION .EQS. "CREATE" THEN USE_JDBC="NO"
 $
 $! Check that Mimer SQL is installed and started
 $ CALL CHECK_MIMER
@@ -338,7 +339,7 @@ $   WRITE SYS$OUTPUT "MIMER_DATABASE not defined"
 $   GOTO EXIT_ERR
 $ ENDIF
 $ WRITE SYS$OUTPUT "Using Mimer SQL database ''F$TRNLNM("MIMER_DATABASE")'. Mimer SQL version information:"
-$! Check JDBC environment if JDBC load is used (not RMULOAD or CONTINUE_RMULOAD)
+$! Check JDBC environment if JDBC load is used (not CREATE, RMULOAD or CONTINUE_RMULOAD)
 $ IF USE_JDBC .EQS. "YES"
 $ THEN
 $   CLASSPATH_ERR = 0
