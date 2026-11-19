@@ -68,6 +68,7 @@ The second argument, `<schema>`, is used as the schema name in Mimer SQL and to 
 
 - When direct migration is used only the SQL schema is extracted from Rdb and the resulting SQL file is put in `[.unload_data]`. No data files are created.
 - When file based migration is used (by specifying `ALL`), the same SQL schema extraction is done, but in addition each table with data will be exported into a text file in `[.unload_data]`.
+  - The tables are unloaded with `/VIRTUAL_FIELDS=(AUTOMATIC,NOCOMPUTED_BY)`. Without it, RMU/UNLOAD leaves out IDENTITY and AUTOMATIC columns, so their values would be lost. COMPUTED BY columns are left out, since they are not columns in the Mimer SQL tables.
 
 
 When the unload operation is finished, the migration and loading of the schema and data into Mimer SQL is performed by running:

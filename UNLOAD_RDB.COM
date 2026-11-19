@@ -52,7 +52,9 @@ $ loop:
 $   read/end_of_file=loop_done input_chan line
 $   tab = f$edit(line, "TRIM")
 $   write sys$output "Unloading ''tab'"
-$   rmu/unload/RECORD_DEFINITION=(FORMAT=DELIMITED_TEXT, PREFIX="", SUFFIX="", separator="|", null="\-") 'DB' 'tab' [.UNLOAD_DATA]'SCHEMA'-'tab'.TXT
+$   ! Without /VIRTUAL_FIELDS, IDENTITY and AUTOMATIC columns are not unloaded. COMPUTED BY
+$   ! columns are excluded since they do not exist in the Mimer SQL tables.
+$   rmu/unload/VIRTUAL_FIELDS=(AUTOMATIC,NOCOMPUTED_BY)/RECORD_DEFINITION=(FORMAT=DELIMITED_TEXT, PREFIX="", SUFFIX="", separator="|", null="\-") 'DB' 'tab' [.UNLOAD_DATA]'SCHEMA'-'tab'.TXT
 $   goto loop
 $ loop_done:
 $   close input_chan
