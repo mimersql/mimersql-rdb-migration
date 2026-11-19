@@ -245,20 +245,20 @@ else
 fi
 echo "Check done"
 
-# Create directory for log files or clear it if it exists
+# Create directory for log files or clear this schema's files if it exists
 if [ ! -d ./LOG ]; then
   mkdir ./LOG
 else
   if [ "${OPERATION}" = "CREATE" -o "${OPERATION}" = "ALL" ]; then
-    rm -f ./LOG/*
+    rm -f ./LOG/${SCHEMA}* ./LOG/*_${SCHEMA}*
   fi
 fi
-# Create directory for generated files scripts or clear it if it exists
+# Create directory for generated files or clear this schema's files if it exists
 if [ ! -d ./GEN_SQL ]; then
   mkdir ./GEN_SQL
 else
   if [ "${OPERATION}" = "CREATE" -o "${OPERATION}" = "ALL" ]; then
-    rm -f ./GEN_SQL/*
+    rm -f ./GEN_SQL/${SCHEMA}-* ./GEN_SQL/${SCHEMA}_* ./GEN_SQL/*_${SCHEMA}*
   fi
 fi
 
@@ -269,7 +269,7 @@ if [ "${OPERATION}" = "CREATE" -o "${OPERATION}" = "ALL" ]; then
     echo "Translating database schema from Rdb to Mimer SQL, result in ./GEN_SQL"
     sqltranslator --rdb --script --nologo --${ENCODING} ./UNLOAD_DATA/${SCHEMA}-SCHEMA-RDB.SQL ./GEN_SQL/${SCHEMA}-SCHEMA-MIMER.SQL
     echo "Creating database user and databank, log result to ./LOG/CREATE_USERS_${SCHEMA}.LOG"
-    OS_USER=$USERNAME
+    OS_USER=$(id -un)
     echo "log input,output on './LOG/CREATE_USERS_${SCHEMA}.LOG';" > ./GEN_SQL/CREATE_USERS_${SCHEMA}.SQL
     echo "WHENEVER ERROR CONTINUE;" >> ./GEN_SQL/CREATE_USERS_${SCHEMA}.SQL
     echo "create ident ${MIMER_USER} as user identified by '${MIMER_PASS}';" >> ./GEN_SQL/CREATE_USERS_${SCHEMA}.SQL
