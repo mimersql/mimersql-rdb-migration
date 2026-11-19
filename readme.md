@@ -142,6 +142,18 @@ To continue the load, remove the tables that have been successfully loaded from 
 
 To avoid duplicate errors, delete all rows in tables that have been partially loaded before continuing the load.
 
+### Table mappings
+
+The file based migration reads the data for each table from `[.UNLOAD_DATA]<schema>-<tablename>.TXT`, where `<tablename>` is the name of the table in Mimer SQL. If a table has a different name in Mimer SQL than in Rdb, for example when a table with COMPUTED BY columns is created as `<table>_BASE` with a view that has the original name, the names can be mapped in the optional file `[.UNLOAD_DATA]<schema>-TABLE-MAPPINGS.TXT`. Each line has the Mimer SQL table name followed by the Rdb table name, separated by spaces. Empty lines and lines starting with `#` are ignored:
+
+```
+# Mimer SQL table   Rdb table
+ADDRESS_BASE        ADDRESS
+PERSON_BASE         PERSON
+```
+
+The data is then loaded into the Mimer SQL table from the data file with the Rdb name, and the log file is named after the Mimer SQL table. The mapping is used by `RMULOAD` and `CONTINUE_RMULOAD`. The direct data migration with MimerJMigrate does not use it yet, and reads each Rdb table by its Mimer SQL name.
+
 ## Migrating Embedded SQL Programs
 
 Programs written in COBOL or Fortran with Rdb Embedded SQL can be converted to Mimer SQL Embedded SQL and built with the command procedures `build_cobol.com` and `build_fortran.com`:

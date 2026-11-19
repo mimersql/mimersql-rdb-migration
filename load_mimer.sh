@@ -53,9 +53,29 @@ load_all(){
     java -cp ${MIGRATE_CLASSPATH} MimerJMigrate -u ${MIMER_USER} -p ${MIMER_PASS} -f ${tab_file} -t ${SCHEMA}
 }
 
+# Print the Rdb table name for a Mimer table from the optional mapping file
+# ("<Mimer table> <Rdb table>" per line), or the Mimer name if not mapped.
+rdb_table_name(){
+    local mimer_tab rdb_tab rest
+    if [ -f "${MAP_FILE}" ]; then
+        while read -r mimer_tab rdb_tab rest; do
+            case "${mimer_tab}" in
+                ''|\#*) continue ;;
+            esac
+            rdb_tab=${rdb_tab%$'\r'}
+            if [ "$(to_upper "${mimer_tab}")" = "$(to_upper "${1}")" -a "${rdb_tab}" != "" ]; then
+                printf '%s' "${rdb_tab}"
+                return
+            fi
+        done < "${MAP_FILE}"
+    fi
+    printf '%s' "${1}"
+}
+
 rmu_load_table(){
     tab=${1}
-    if [ -e ./UNLOAD_DATA/${SCHEMA}-${tab}.TXT ]; then
+    data_tab=$(rdb_table_name "${tab}")
+    if [ -e ./UNLOAD_DATA/${SCHEMA}-${data_tab}.TXT ]; then
         if [ "${DELETE}" = "YES" ]; then
             echo "Cleaning ${SCHEMA}.${tab}"
             bsql --username=${MIMER_USER} --password=${MIMER_PASS} --query="delete from ${SCHEMA}.${tab}" >> ./LOG/TMP_OUTPUT.LOG 2>&1
@@ -63,8 +83,12 @@ rmu_load_table(){
         if [ "${SHOW_TIMING}" = "YES" ]; then
             start=$(date +%s)
         fi
-        echo "Loading ${SCHEMA}.${tab}"
-        LOAD_CMD="load from 'DELIM.DAT', './UNLOAD_DATA/${SCHEMA}-${tab}.TXT' as ${ENCODING} log './LOG/LOAD_${SCHEMA}-${tab}.LOG' with bulk load insert into ${SCHEMA}.${tab}"
+        if [ "${data_tab}" = "${tab}" ]; then
+            echo "Loading ${SCHEMA}.${tab}"
+        else
+            echo "Loading ${SCHEMA}.${tab} from ./UNLOAD_DATA/${SCHEMA}-${data_tab}.TXT"
+        fi
+        LOAD_CMD="load from 'DELIM.DAT', './UNLOAD_DATA/${SCHEMA}-${data_tab}.TXT' as ${ENCODING} log './LOG/LOAD_${SCHEMA}-${tab}.LOG' with bulk load insert into ${SCHEMA}.${tab}"
         mimload --username=${MIMER_USER} --password=${MIMER_PASS} "${LOAD_CMD}" ${MIMER_DATABASE}
         if [ "${SHOW_TIMING}" = "YES" ]; then
             end=$(date +%s)
@@ -251,6 +275,7 @@ fix_vms_names "*"
 
 # Check export directory
 TABLE_DEFS="./UNLOAD_DATA/${SCHEMA}-TABLES-MIMER.TXT"
+MAP_FILE="./UNLOAD_DATA/${SCHEMA}-TABLE-MAPPINGS.TXT"
 echo "Checking directory and files"
 if [ ! -e ./UNLOAD_DATA ]; then
   echo "The directory ./UNLOAD_DATA/ with unloaded data not found"

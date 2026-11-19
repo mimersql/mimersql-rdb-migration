@@ -286,6 +286,29 @@ $ IF OPERATION .NES. "RMULOAD"
 $     THEN 
 $     IF OPERATION .NES. "CONTINUE_RMULOAD" THEN GOTO DIRECT_LOAD
 $ ENDIF
+$! Read the optional table mappings, "<Mimer table> <Rdb table>" per line,
+$! used when the Mimer table name differs from the name of the data file.
+$ MAP_FILE = "[.UNLOAD_DATA]''SCHEMA'-TABLE-MAPPINGS.TXT"
+$ IF F$SEARCH(MAP_FILE) .EQS. "" THEN GOTO map_done
+$ WRITE SYS$OUTPUT "Reading table mappings from ''MAP_FILE'"
+$ CLOSE/NOLOG map_file
+$ OPEN/READ map_file 'MAP_FILE'
+$ map_loop:
+$   READ/END_OF_FILE=map_close map_file line
+$   line = F$EDIT(line, "TRIM,COMPRESS")
+$   IF line .EQS. "" .OR. F$EXTRACT(0, 1, line) .EQS. "#" THEN GOTO map_loop
+$   map_mimer = F$ELEMENT(0, " ", line)
+$   map_rdb = F$ELEMENT(1, " ", line)
+$   IF map_rdb .EQS. " " .OR. map_rdb .EQS. ""
+$   THEN
+$       WRITE SYS$OUTPUT "Ignoring invalid line in ''MAP_FILE': ''line'"
+$   ELSE
+$       MAP_'map_mimer' = map_rdb
+$   ENDIF
+$   GOTO map_loop
+$ map_close:
+$   CLOSE map_file
+$ map_done:
 $ ! Open the file with tables
 $ open/read table_file 'TABLE_DEFS'
 $! In case the file was left open in an earlier attempt, close it and open it again
@@ -297,17 +320,24 @@ $   read/end_of_file=done table_file line
 $   tab = f$edit(line, "TRIM")
 $   IF tab .NES. ""
 $   THEN
-$       TMP = F$SEARCH("[.UNLOAD_DATA]''SCHEMA'-''tab'.TXT")
+$       data_tab = tab
+$       IF F$TYPE(MAP_'tab') .NES. "" THEN data_tab = MAP_'tab'
+$       TMP = F$SEARCH("[.UNLOAD_DATA]''SCHEMA'-''data_tab'.TXT")
 $       IF TMP .NES. ""
 $       THEN
-$           write sys$output "Loading ''SCHEMA'.''tab'"
+$           IF data_tab .EQS. tab
+$           THEN
+$               write sys$output "Loading ''SCHEMA'.''tab'"
+$           ELSE
+$               write sys$output "Loading ''SCHEMA'.''tab' from [.UNLOAD_DATA]''SCHEMA'-''data_tab'.TXT"
+$           ENDIF
 $           QSCHEMA = """" + """" + SCHEMA + """" + """"
 $           QTABLE  = """" + """" + tab    + """" + """"
 $           IF LOAD_LOG_STDERR .EQS. "YES"
 $           THEN
-$               LOAD_CMD = """" + "load from 'DELIM.DAT', '[.UNLOAD_DATA]" + SCHEMA + "-" + tab + ".TXT' as LATIN1 log stderr with bulk load insert into " + QSCHEMA + "." + QTABLE + """"
+$               LOAD_CMD = """" + "load from 'DELIM.DAT', '[.UNLOAD_DATA]" + SCHEMA + "-" + data_tab + ".TXT' as LATIN1 log stderr with bulk load insert into " + QSCHEMA + "." + QTABLE + """"
 $           ELSE
-$               LOAD_CMD = """" + "load from 'DELIM.DAT', '[.UNLOAD_DATA]" + SCHEMA + "-" + tab + ".TXT' as LATIN1 log '[.LOG]LOAD_" + SCHEMA + "-" + tab + ".LOG' with bulk load insert into " + QSCHEMA + "." + QTABLE + """"
+$               LOAD_CMD = """" + "load from 'DELIM.DAT', '[.UNLOAD_DATA]" + SCHEMA + "-" + data_tab + ".TXT' as LATIN1 log '[.LOG]LOAD_" + SCHEMA + "-" + tab + ".LOG' with bulk load insert into " + QSCHEMA + "." + QTABLE + """"
 $           ENDIF
 $           START = F$CVTIME(,"ABSOLUTE")
 $           mimload/user="''MIMER_USER'"/password="''MIMER_PASS'" 'LOAD_CMD'
