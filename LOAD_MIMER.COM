@@ -1,7 +1,10 @@
 $! Create schemas in Mimer SQL and load data
 $!
+$! DCL converts unquoted parameters to upper case. Put passwords with lower
+$! case letters within double quotes, or give "" to be prompted for them.
+$!
 $ MIMER_USER = "mimeruser"
-$ MIMER_PASS = "gB7Xd92jLmWZ"
+$ MIMER_PASS = ""
 $ SYSPASS=""
 $ OPERATION="ALL"
 $ LOAD_LOG_STDERR="YES"
@@ -10,8 +13,9 @@ $ USE_JDBC="YES"
 $ IF  P1 .nes. ""
 $   THEN SYSPASS="''P1'"
 $ ELSE
-$   WRITE SYS$OUTPUT "Enter SYSADM password"
-$   READ/TIMEOUT=20/PROMPT="Password: " SYS$COMMAND SYSPASS
+$   CALL READ_PASSWORD "SYSADM"
+$   SYSPASS = READ_PASSWORD_RESULT
+$   DELETE/SYMBOL/GLOBAL READ_PASSWORD_RESULT
 $   IF SYSPASS .eqs. ""
 $   THEN
 $       WRITE SYS$OUTPUT "Timeout or empty password. Aborting"
@@ -28,13 +32,35 @@ $ ENDIF
 $ IF  P3 .nes. ""
 $   THEN MIMER_USER="''P3'"
 $ ENDIF
-$ IF  P4 .nes. ""
-$   THEN MIMER_PASS="''P4'"
-$ ENDIF
 $ IF  P5 .nes. ""
 $   THEN
 $   WRITE SYS$OUTPUT "Setting operation to ''P5'"
 $   OPERATION="''P5'"
+$ ENDIF
+$! P4 is handled after P5, since the password is only verified when the
+$! user is created.
+$ IF  P4 .nes. ""
+$   THEN MIMER_PASS="''P4'"
+$ ELSE
+$   CALL READ_PASSWORD "''MIMER_USER'"
+$   MIMER_PASS = READ_PASSWORD_RESULT
+$   DELETE/SYMBOL/GLOBAL READ_PASSWORD_RESULT
+$   IF MIMER_PASS .eqs. ""
+$   THEN
+$       WRITE SYS$OUTPUT "Timeout or empty password. Aborting"
+$       EXIT 4
+$   ENDIF
+$   IF OPERATION .EQS. "CREATE" .OR. OPERATION .EQS. "ALL"
+$   THEN
+$       CALL READ_PASSWORD "''MIMER_USER'" " again"
+$       PASSWORD_AGAIN = READ_PASSWORD_RESULT
+$       DELETE/SYMBOL/GLOBAL READ_PASSWORD_RESULT
+$       IF PASSWORD_AGAIN .NES. MIMER_PASS
+$       THEN
+$           WRITE SYS$OUTPUT "Passwords do not match. Aborting"
+$           EXIT 4
+$       ENDIF
+$   ENDIF
 $ ENDIF
 $ IF  P6 .nes. ""
 $   THEN DATABANK_FILE="''P6'"
@@ -330,6 +356,30 @@ $ bsql/username="''MIMER_USER'"/password="''MIMER_PASS'"/query="update statistic
 $ WRITE SYS$OUTPUT "Finished loading data into Mimer SQL using the database user ''MIMER_USER' and database schema ''SCHEMA'"
 $ EXIT_OK:
 $ EXIT
+$
+$! Prompts for the password of the user in P1 without echoing the input.
+$! P2 is an optional text added after "password" in the prompt.
+$! The password is returned in the global symbol READ_PASSWORD_RESULT,
+$! which is empty on timeout, Ctrl/Z or Ctrl/Y.
+$ READ_PASSWORD: SUBROUTINE
+$ READ_PASSWORD_RESULT == ""
+$ PASSWORD = ""
+$ IS_TERMINAL = F$GETDVI("SYS$COMMAND","TRM")
+$ ON CONTROL_Y THEN GOTO READ_PASSWORD_DONE
+$! With NOECHO the terminal driver does not start the prompt on a new line,
+$! so the prompt itself starts with a new line.
+$ PROMPT = F$FAO("!/Enter !AS password!AS: ", P1, P2)
+$ IF IS_TERMINAL THEN SET TERMINAL/NOECHO
+$ READ/TIMEOUT=20/PROMPT="''PROMPT'"/ERROR=READ_PASSWORD_DONE/END_OF_FILE=READ_PASSWORD_DONE SYS$COMMAND PASSWORD
+$ READ_PASSWORD_DONE:
+$ IF IS_TERMINAL
+$ THEN
+$   SET TERMINAL/ECHO
+$   WRITE SYS$OUTPUT ""
+$ ENDIF
+$ READ_PASSWORD_RESULT == PASSWORD
+$ EXIT 1
+$ ENDSUBROUTINE
 $
 $! Checks that the Mimer SQL environment is correct
 $ CHECK_MIMER: SUBROUTINE

@@ -2,7 +2,7 @@
 # Create schemas in Mimer SQL and load data
 
 MIMER_USER="mimeruser"
-MIMER_PASS="gB7Xd92jLmWZ"
+MIMER_PASS=""
 SYSADM_PASS=""
 ENCODING="latin1"
 OPERATION="ALL"
@@ -18,10 +18,10 @@ usage: $0 options
 Translate RDB schema, create schemas in Mimer SQL, optimize the database and load data
 
 OPTIONS:
-   -p      SYSADM password
+   -p      SYSADM password, prompted for if not given
    -s      Schema
    -u      Mimer SQL user, default is ${MIMER_USER}
-   -P      Password for Mimer SQL user, default is ${MIMER_PASS}
+   -P      Password for Mimer SQL user, prompted for if not given
    -e      Encoding of the input files, default is latin1
    -o      Operation, can be CREATE, LOAD, CONTINUE_LOAD, RMULOAD, or CONTINUE_RMULOAD. Default is to run all steps
    -d      Delete all rows in tables to be loaded before doing the load
@@ -29,6 +29,18 @@ OPTIONS:
    -T      Show timing of the load operations
    -f      Main databank file (if not set the schema name will be used and the path is the database home directory)
 EOF
+}
+
+# Prompt for a password without echoing it. Exits if the password is empty.
+read_password(){
+    local password
+    read -r -s -p "Enter ${1} password${2}: " password
+    echo >&2
+    if [ "${password}" = "" ]; then
+        echo "Empty password. Aborting" >&2
+        exit 1
+    fi
+    printf '%s' "${password}"
 }
 
 load_table(){
@@ -203,8 +215,17 @@ do
 done
 
 if [ "${SYSADM_PASS}" = "" ]; then
-    echo "Enter SYSADM password: "
-    read mim_env
+    SYSADM_PASS=$(read_password SYSADM) || exit 1
+fi
+if [ "${MIMER_PASS}" = "" ]; then
+    MIMER_PASS=$(read_password "${MIMER_USER}") || exit 1
+    if [ "${OPERATION}" = "CREATE" -o "${OPERATION}" = "ALL" ]; then
+        PASSWORD_AGAIN=$(read_password "${MIMER_USER}" " again") || exit 1
+        if [ "${PASSWORD_AGAIN}" != "${MIMER_PASS}" ]; then
+            echo "Passwords do not match. Aborting"
+            exit 1
+        fi
+    fi
 fi
 
 if [ "${SCHEMA}" = "" ]; then
