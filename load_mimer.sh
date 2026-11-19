@@ -275,7 +275,7 @@ fix_vms_names "*"
 
 # Check export directory
 TABLE_DEFS="./UNLOAD_DATA/${SCHEMA}-TABLES-MIMER.TXT"
-MAP_FILE="./UNLOAD_DATA/${SCHEMA}-TABLE-MAPPINGS.TXT"
+MAP_FILE="./EXTRA_SQL/${SCHEMA}-TABLE-MAPPINGS.TXT"
 echo "Checking directory and files"
 if [ ! -e ./UNLOAD_DATA ]; then
   echo "The directory ./UNLOAD_DATA/ with unloaded data not found"

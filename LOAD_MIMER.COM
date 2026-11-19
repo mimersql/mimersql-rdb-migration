@@ -288,7 +288,7 @@ $     IF OPERATION .NES. "CONTINUE_RMULOAD" THEN GOTO DIRECT_LOAD
 $ ENDIF
 $! Read the optional table mappings, "<Mimer table> <Rdb table>" per line,
 $! used when the Mimer table name differs from the name of the data file.
-$ MAP_FILE = "[.UNLOAD_DATA]''SCHEMA'-TABLE-MAPPINGS.TXT"
+$ MAP_FILE = "[.EXTRA_SQL]''SCHEMA'-TABLE-MAPPINGS.TXT"
 $ IF F$SEARCH(MAP_FILE) .EQS. "" THEN GOTO map_done
 $ WRITE SYS$OUTPUT "Reading table mappings from ''MAP_FILE'"
 $ CLOSE/NOLOG map_file
