@@ -55,19 +55,28 @@ load_all(){
 
 # Print the Rdb table name for a Mimer table from the optional mapping file
 # ("<Mimer table> <Rdb table>" per line), or the Mimer name if not mapped.
-rdb_table_name(){
-    local mimer_tab rdb_tab rest
+# Read the optional mapping file once, in upper case and without CR, so that
+# the lookup for each table does not have to start any processes.
+load_table_mappings(){
+    MAP_DATA=""
     if [ -f "${MAP_FILE}" ]; then
+        MAP_DATA=$(tr -d '\r' < "${MAP_FILE}" | tr '[:lower:]' '[:upper:]')
+    fi
+}
+
+rdb_table_name(){
+    local wanted mimer_tab rdb_tab rest
+    if [ "${MAP_DATA}" != "" ]; then
+        wanted=$(to_upper "${1}")
         while read -r mimer_tab rdb_tab rest; do
             case "${mimer_tab}" in
                 ''|\#*) continue ;;
             esac
-            rdb_tab=${rdb_tab%$'\r'}
-            if [ "$(to_upper "${mimer_tab}")" = "$(to_upper "${1}")" -a "${rdb_tab}" != "" ]; then
+            if [ "${mimer_tab}" = "${wanted}" ] && [ "${rdb_tab}" != "" ]; then
                 printf '%s' "${rdb_tab}"
                 return
             fi
-        done < "${MAP_FILE}"
+        done <<< "${MAP_DATA}"
     fi
     printf '%s' "${1}"
 }
@@ -276,6 +285,7 @@ fix_vms_names "*"
 # Check export directory
 TABLE_DEFS="./UNLOAD_DATA/${SCHEMA}-TABLES-MIMER.TXT"
 MAP_FILE="./EXTRA_SQL/${SCHEMA}-TABLE-MAPPINGS.TXT"
+load_table_mappings
 echo "Checking directory and files"
 if [ ! -e ./UNLOAD_DATA ]; then
   echo "The directory ./UNLOAD_DATA/ with unloaded data not found"
